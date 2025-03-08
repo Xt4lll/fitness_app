@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">fitness_app</string>
+    <string name="title_activity_reg_auth">RegAuthActivity</string>
+</resources>
