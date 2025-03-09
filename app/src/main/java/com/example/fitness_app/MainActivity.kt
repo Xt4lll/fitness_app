@@ -18,7 +18,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             StartScreen(onAuthSuccess = {
-                // Перейти на главную страницу приложения
             })
         }
     }
