@@ -1,28 +1,16 @@
 package com.example.fitness_app
 
-import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.storage.FirebaseStorage
-import java.util.UUID
 
 @Composable
 fun ProfileScreen(userId: String, onLogout: () -> Unit) {
@@ -151,33 +139,4 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
             Text("Выйти из аккаунта")
         }
     }
-}
-
-// Функция для загрузки изображения в Firebase Storage
-fun uploadImageToFirebaseStorage(
-    imageUri: Uri,
-    userId: String,
-    storage: FirebaseStorage,
-    db: FirebaseFirestore,
-    onSuccess: (String) -> Unit
-) {
-    val storageRef = storage.reference
-    val imageRef = storageRef.child("avatars/${userId}/${UUID.randomUUID()}.jpg")
-
-    imageRef.putFile(imageUri)
-        .addOnSuccessListener {
-            imageRef.downloadUrl.addOnSuccessListener { uri ->
-                val imageUrl = uri.toString()
-                db.collection("users").document(userId).update("avatar_url", imageUrl)
-                    .addOnSuccessListener {
-                        onSuccess(imageUrl)
-                    }
-                    .addOnFailureListener { e ->
-                        // Обработка ошибки
-                    }
-            }
-        }
-        .addOnFailureListener { e ->
-            // Обработка ошибки
-        }
 }
