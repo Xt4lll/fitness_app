@@ -41,6 +41,7 @@ android {
 }
 
 dependencies {
+    implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
     implementation("androidx.compose.material:material-icons-core:1.5.4")
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
     implementation("io.coil-kt:coil-compose:2.4.0")
