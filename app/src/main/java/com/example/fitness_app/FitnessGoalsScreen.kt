@@ -24,6 +24,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +50,12 @@ fun FitnessGoalsScreen() {
                     doc.toObject(FitnessGoal::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
                 goals.clear()
-                goals.addAll(newGoals.sortedBy { it.createdDate })
+                goals.addAll(newGoals.sortedWith(
+                    compareBy(
+                        { it.isCompleted },
+                        { -it.createdDate.seconds }
+                    )
+                ))
             }
     }
 
@@ -95,39 +103,72 @@ fun FitnessGoalsScreen() {
 fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
     var isTimerRunning by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableStateOf(goal.currentProgress) }
-    val coroutineScope = rememberCoroutineScope()
+    var checkedState by remember { mutableStateOf(goal.isCompleted) }
 
-    LaunchedEffect(goal.currentProgress) {
-        currentProgress = goal.currentProgress
+    // Автоматическое завершение цели
+    LaunchedEffect(currentProgress) {
+        if (currentProgress >= goal.target && !checkedState) {
+            firestore.collection("fitness_goals").document(goal.id)
+                .update(mapOf(
+                    "isCompleted" to true,
+                    "currentProgress" to goal.target
+                ))
+                .addOnSuccessListener {
+                    checkedState = true
+                    currentProgress = goal.target
+                }
+        }
     }
 
-    LaunchedEffect(isTimerRunning) {
-        if (isTimerRunning) {
-            while (isTimerRunning) {
-                delay(1000L)
-                currentProgress += 1
-                coroutineScope.launch {
-                    firestore.collection("fitness_goals")
-                        .document(goal.id)
-                        .update("currentProgress", currentProgress)
-                }
+    // Обновление прогресса с проверкой
+    fun updateProgress(newValue: Long) {
+        if (newValue > goal.target) return
+
+        firestore.collection("fitness_goals").document(goal.id)
+            .update("currentProgress", newValue)
+            .addOnSuccessListener {
+                currentProgress = newValue.toInt() // Типы совпадают (Long)
             }
+    }
+
+    // Таймер для времени
+    LaunchedEffect(isTimerRunning) {
+        while (isTimerRunning && currentProgress < goal.target) {
+            delay(1000L)
+            updateProgress(currentProgress + 1L)
         }
+        isTimerRunning = false
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (checkedState) Color.LightGray.copy(alpha = 0.3f)
+            else MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
-                    checked = goal.isCompleted,
-                    onCheckedChange = {
-                        firestore.collection("fitness_goals")
-                            .document(goal.id)
-                            .update("isCompleted", !goal.isCompleted)
+                    checked = checkedState,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) {
+                            firestore.collection("fitness_goals").document(goal.id)
+                                .update(mapOf(
+                                    "isCompleted" to true,
+                                    "currentProgress" to goal.target
+                                ))
+                                .addOnSuccessListener {
+                                    checkedState = true
+                                    currentProgress = goal.target
+                                }
+                        } else {
+                            firestore.collection("fitness_goals").document(goal.id)
+                                .update("isCompleted", false)
+                                .addOnSuccessListener { checkedState = false }
+                        }
                     }
                 )
                 Text(goal.title, modifier = Modifier.weight(1f))
@@ -142,7 +183,14 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                 }
             }
 
-            Text("Прогресс: ${currentProgress}/${goal.target}")
+            LinearProgressIndicator(
+                progress = (currentProgress.toFloat() / goal.target.toFloat()).coerceIn(0f, 1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+            )
+
+            Text("Прогресс: $currentProgress/${goal.target}")
             Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.plannedDate.seconds * 1000))}")
 
             when (goal.type) {
@@ -152,21 +200,13 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         IconButton(
-                            onClick = {
-                                firestore.collection("fitness_goals")
-                                    .document(goal.id)
-                                    .update("currentProgress", currentProgress - 1)
-                            }
+                            onClick = { updateProgress((currentProgress - 1L).coerceAtLeast(0)) }
                         ) {
                             Icon(Icons.Default.Remove, "-")
                         }
                         Text("$currentProgress")
                         IconButton(
-                            onClick = {
-                                firestore.collection("fitness_goals")
-                                    .document(goal.id)
-                                    .update("currentProgress", currentProgress + 1)
-                            }
+                            onClick = { updateProgress(currentProgress + 1L) }
                         ) {
                             Icon(Icons.Default.Add, "+")
                         }
@@ -177,7 +217,8 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                         onClick = { isTimerRunning = !isTimerRunning },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isTimerRunning) Color.Red else Color.Green
-                        )
+                        ),
+                        enabled = !checkedState
                     ) {
                         Text(if (isTimerRunning) "Пауза" else "Старт")
                     }
