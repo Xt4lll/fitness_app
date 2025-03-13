@@ -41,6 +41,8 @@ android {
 }
 
 dependencies {
+    implementation ("com.google.firebase:firebase-firestore-ktx:24.9.1")
+    implementation ("com.google.firebase:firebase-auth-ktx:22.3.0")
     implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
     implementation("androidx.compose.material:material-icons-core:1.5.4")
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
@@ -58,6 +60,7 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.storage.ktx)
+    implementation(libs.androidx.runtime.livedata)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

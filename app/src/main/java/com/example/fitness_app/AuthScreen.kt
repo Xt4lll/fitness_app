@@ -175,29 +175,29 @@ fun registerUser(email: String, password: String, nickname: String, callback: (B
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+                val userId = auth.currentUser?.uid ?: run {
+                    callback(false, "Ошибка: пользователь не найден", null)
+                    return@addOnCompleteListener
+                }
 
-                // Создаем данные пользователя
-                val user = hashMapOf(
+                // Данные пользователя
+                val userData = hashMapOf(
                     "email" to email,
-                    "nickname" to nickname, // Добавляем никнейм
-                    "height" to 0.0,
-                    "weight" to 0.0,
-                    "goal_weight" to 0.0,
-                    "daily_step_goal" to 10000,
-                    "created_at" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    "nickname" to nickname,
+                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
 
-                // Сохраняем данные в Firestore
-                db.collection("users").document(userId).set(user)
+                // Сохранение в коллекцию users
+                db.collection("users").document(userId)
+                    .set(userData)
                     .addOnSuccessListener {
                         callback(true, "Регистрация успешна", userId)
                     }
                     .addOnFailureListener { e ->
-                        callback(false, "Ошибка при сохранении данных пользователя: ${e.message}", null)
+                        callback(false, "Ошибка Firestore: ${e.message}", null)
                     }
             } else {
-                callback(false, "Ошибка регистрации: ${task.exception?.message}", null)
+                callback(false, "Ошибка аутентификации: ${task.exception?.message}", null)
             }
         }
 }
