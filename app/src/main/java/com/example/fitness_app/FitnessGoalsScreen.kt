@@ -127,7 +127,7 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
         firestore.collection("fitness_goals").document(goal.id)
             .update("currentProgress", newValue)
             .addOnSuccessListener {
-                currentProgress = newValue.toInt() // Типы совпадают (Long)
+                currentProgress = newValue.toInt()
             }
     }
 
@@ -240,12 +240,19 @@ fun AddGoalDialog(
     var goalType by remember { mutableStateOf(FitnessGoal.GoalType.REPS) }
     var plannedDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var isDateValid by remember { mutableStateOf(true) } // Флаг для валидации даты
 
     if (showDatePicker) {
         DatePickerDialog(
             initialDate = plannedDate,
             onDateSelected = { date ->
-                plannedDate = date
+                // Проверка, что выбранная дата не прошедшая
+                if (date.before(Date())) {
+                    isDateValid = false
+                } else {
+                    plannedDate = date
+                    isDateValid = true
+                }
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false }
@@ -302,6 +309,11 @@ fun AddGoalDialog(
                     Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(plannedDate)}")
                 }
 
+                // Если дата не валидна, показываем ошибку
+                if (!isDateValid) {
+                    Text("Дата не может быть в прошлом", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
@@ -325,7 +337,7 @@ fun AddGoalDialog(
                             onSave(newGoal)
                             onDismiss()
                         },
-                        enabled = title.isNotBlank() && target.isNotBlank()
+                        enabled = title.isNotBlank() && target.isNotBlank() && isDateValid // Проверка на валидность даты
                     ) {
                         Text("Сохранить")
                     }
@@ -354,14 +366,17 @@ fun DatePickerDialog(
                     datePickerState.selectedDateMillis?.let {
                         onDateSelected(Date(it))
                     }
-                    onDismiss()
                 }
-            ) { Text("OK") }
+            ) {
+                Text("Выбрать")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Отмена")
+            }
         }
     ) {
-        DatePicker(
-            state = datePickerState,
-            title = { Text("Выберите дату") }
-        )
+        DatePicker(state = datePickerState)
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.animation.with
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
@@ -36,7 +38,7 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var nickname by remember { mutableStateOf("") } // Новое поле для никнейма
+    var nickname by remember { mutableStateOf("") }
     var isSignUp by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -47,7 +49,6 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Анимация для текста заголовка
         AnimatedContent(
             targetState = isSignUp,
             transitionSpec = {
@@ -63,7 +64,6 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Поле для email
         TextField(
             value = email,
             onValueChange = { email = it },
@@ -73,18 +73,17 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Поле для пароля
         TextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Пароль") },
             visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Плавное появление/исчезновение поля для подтверждения пароля и никнейма
         AnimatedVisibility(
             visible = isSignUp,
             enter = fadeIn() + expandVertically(),
@@ -99,6 +98,7 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
                     onValueChange = { confirmPassword = it },
                     label = { Text("Повторите пароль") },
                     visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -117,11 +117,15 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Кнопка для входа или регистрации
         Button(
             onClick = {
                 if (email.isEmpty() || password.isEmpty()) {
                     Toast.makeText(context, "Пожалуйста, заполните все поля", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                if (password.length < 8) {
+                    Toast.makeText(context, "Пароль должен быть не менее 8 символов", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
@@ -156,7 +160,6 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Текст для переключения между регистрацией и входом
         Text(
             text = if (isSignUp) "Уже есть аккаунт? Войти" else "Нет аккаунта? Зарегистрироваться",
             color = MaterialTheme.colorScheme.primary,
@@ -180,14 +183,12 @@ fun registerUser(email: String, password: String, nickname: String, callback: (B
                     return@addOnCompleteListener
                 }
 
-                // Данные пользователя
                 val userData = hashMapOf(
                     "email" to email,
                     "nickname" to nickname,
                     "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
 
-                // Сохранение в коллекцию users
                 db.collection("users").document(userId)
                     .set(userData)
                     .addOnSuccessListener {

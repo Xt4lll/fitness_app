@@ -2,11 +2,13 @@ package com.example.fitness_app
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,11 +21,15 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
     var goalWeight by remember { mutableStateOf("") }
     var dailyStepGoal by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
+    var heightError by remember { mutableStateOf<String?>(null) }
+    var weightError by remember { mutableStateOf<String?>(null) }
+    var goalWeightError by remember { mutableStateOf<String?>(null) }
+    var dailyStepGoalError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // Получаем текущие данные пользователя из Firestore
     LaunchedEffect(userId) {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -31,7 +37,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
                     height = document.getDouble("height")?.toString() ?: ""
                     weight = document.getDouble("weight")?.toString() ?: ""
                     goalWeight = document.getDouble("goal_weight")?.toString() ?: ""
-                    dailyStepGoal = document.getDouble("daily_step_goal")?.toString() ?: ""
+                    dailyStepGoal = document.getDouble("daily_step_goal")?.toInt()?.toString() ?: ""
                     nickname = document.getString("nickname") ?: ""
                 }
             }
@@ -44,81 +50,102 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Никнейм
         Text(
             text = nickname,
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // Поля для изменения параметров
-        TextField(
+        // Поле "Рост"
+        OutlinedTextField(
             value = height,
-            onValueChange = { height = it },
+            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) height = it },
             label = { Text("Рост (см)") },
-            modifier = Modifier.fillMaxWidth()
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            isError = heightError != null
         )
+        heightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextField(
+        // Поле "Вес"
+        OutlinedTextField(
             value = weight,
-            onValueChange = { weight = it },
+            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) weight = it },
             label = { Text("Вес (кг)") },
-            modifier = Modifier.fillMaxWidth()
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            isError = weightError != null
         )
+        weightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextField(
+        // Поле "Цель по весу"
+        OutlinedTextField(
             value = goalWeight,
-            onValueChange = { goalWeight = it },
+            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) goalWeight = it },
             label = { Text("Цель по весу (кг)") },
-            modifier = Modifier.fillMaxWidth()
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            isError = goalWeightError != null
         )
+        goalWeightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextField(
+        // Поле "Цель по шагам"
+        OutlinedTextField(
             value = dailyStepGoal,
-            onValueChange = { dailyStepGoal = it },
+            onValueChange = { if (it.matches(Regex("^\\d*\$"))) dailyStepGoal = it },
             label = { Text("Цель по шагам") },
-            modifier = Modifier.fillMaxWidth()
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            isError = dailyStepGoalError != null
         )
+        dailyStepGoalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Кнопка сохранения изменений
+        // Кнопка сохранения
         Button(
             onClick = {
-                try {
-                    val heightValue = height.toDoubleOrNull()
-                    val weightValue = weight.toDoubleOrNull()
-                    val goalWeightValue = goalWeight.toDoubleOrNull()
-                    val dailyStepGoalValue = dailyStepGoal.toIntOrNull()
+                heightError = if (height.isEmpty() || height.toDoubleOrNull() == null || height.toDouble() <= 0) {
+                    "Введите корректный рост (больше 0)"
+                } else null
 
-                    if (heightValue == null || weightValue == null || goalWeightValue == null || dailyStepGoalValue == null) {
-                        Toast.makeText(context, "Пожалуйста, введите корректные данные", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                weightError = if (weight.isEmpty() || weight.toDoubleOrNull() == null || weight.toDouble() <= 0) {
+                    "Введите корректный вес (больше 0)"
+                } else null
 
-                    val userData = hashMapOf(
-                        "height" to heightValue,
-                        "weight" to weightValue,
-                        "goal_weight" to goalWeightValue,
-                        "daily_step_goal" to dailyStepGoalValue
-                    )
+                goalWeightError = if (goalWeight.isEmpty() || goalWeight.toDoubleOrNull() == null || goalWeight.toDouble() <= 0) {
+                    "Введите корректную цель по весу (больше 0)"
+                } else null
 
-                    db.collection("users").document(userId).set(userData, SetOptions.merge())
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Данные обновлены!", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(context, "Ошибка обновления данных: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                dailyStepGoalError = if (dailyStepGoal.isEmpty() || dailyStepGoal.toIntOrNull() == null || dailyStepGoal.toInt() <= 0) {
+                    "Введите корректное количество шагов (целое число больше 0)"
+                } else null
+
+                if (heightError != null || weightError != null || goalWeightError != null || dailyStepGoalError != null) {
+                    Toast.makeText(context, "Исправьте ошибки перед сохранением", Toast.LENGTH_SHORT).show()
+                    return@Button
                 }
+
+                val userData = hashMapOf(
+                    "height" to height.toDouble(),
+                    "weight" to weight.toDouble(),
+                    "goal_weight" to goalWeight.toDouble(),
+                    "daily_step_goal" to dailyStepGoal.toInt()
+                )
+
+                db.collection("users").document(userId).set(userData, SetOptions.merge())
+                    .addOnSuccessListener {
+                        Toast.makeText(context, "Данные обновлены!", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Ошибка обновления данных: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -127,11 +154,11 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Кнопка выхода из аккаунта
+        // Кнопка выхода
         Button(
             onClick = {
                 FirebaseAuth.getInstance().signOut()
-                onLogout() // Перенаправляем на экран авторизации
+                onLogout()
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
