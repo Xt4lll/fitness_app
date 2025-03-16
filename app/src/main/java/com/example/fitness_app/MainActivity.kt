@@ -93,7 +93,13 @@ fun FitnessApp() {
                         onLogout = {
                             FirebaseAuth.getInstance().signOut()
                             userId = null
-                        }
+                        },
+                        navController = navController
+                    )
+                }
+                composable("bmi_calculator") {
+                    BMICalculatorScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 composable("goals") {

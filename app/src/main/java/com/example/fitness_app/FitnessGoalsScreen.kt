@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 
 
@@ -34,7 +35,8 @@ fun FitnessGoalsScreen() {
     val firestore = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val userId = auth.currentUser?.uid ?: return
-    val goals = remember { mutableStateListOf<FitnessGoal>() }
+    val activeGoals = remember { mutableStateListOf<FitnessGoal>() }
+    val finishedGoals = remember { mutableStateListOf<FitnessGoal>() }
     var showAddDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -42,20 +44,23 @@ fun FitnessGoalsScreen() {
         firestore.collection("fitness_goals")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("FIREBASE", "Ошибка слушателя: ${error.message}")
-                    return@addSnapshotListener
+                snapshot?.documents?.mapNotNull {
+                    it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                }?.let {
+                    activeGoals.clear()
+                    activeGoals.addAll(it)
                 }
-                val newGoals = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(FitnessGoal::class.java)?.copy(id = doc.id)
-                } ?: emptyList()
-                goals.clear()
-                goals.addAll(newGoals.sortedWith(
-                    compareBy(
-                        { it.isCompleted },
-                        { -it.createdDate.seconds }
-                    )
-                ))
+            }
+
+        firestore.collection("finished_goals")
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, error ->
+                snapshot?.documents?.mapNotNull {
+                    it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                }?.let {
+                    finishedGoals.clear()
+                    finishedGoals.addAll(it)
+                }
             }
     }
 
@@ -68,8 +73,15 @@ fun FitnessGoalsScreen() {
         }
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding)) {
-            items(goals) { goal ->
+            item { Text("Активные цели", style = MaterialTheme.typography.headlineSmall) }
+            items(activeGoals) { goal ->
                 GoalItem(goal, firestore)
+                Divider()
+            }
+
+            item { Text("Выполненные цели", style = MaterialTheme.typography.headlineSmall) }
+            items(finishedGoals) { goal ->
+                FinishedGoalItem(goal)
                 Divider()
             }
         }
@@ -81,18 +93,7 @@ fun FitnessGoalsScreen() {
             onDismiss = { showAddDialog = false },
             onSave = { newGoal ->
                 coroutineScope.launch {
-                    try {
-                        firestore.collection("fitness_goals")
-                            .add(newGoal)
-                            .addOnSuccessListener {
-                                Log.d("FIREBASE", "Документ добавлен: ${it.id}")
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e("FIREBASE", "Ошибка: ${e.message}")
-                            }
-                    } catch (e: Exception) {
-                        Log.e("FIREBASE", "Исключение: ${e.message}")
-                    }
+                    firestore.collection("fitness_goals").add(newGoal.toMap())
                 }
             }
         )
@@ -103,41 +104,54 @@ fun FitnessGoalsScreen() {
 fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
     var isTimerRunning by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableStateOf(goal.currentProgress) }
-    var checkedState by remember { mutableStateOf(goal.isCompleted) }
+    val isCompleted by remember(goal) { derivedStateOf { currentProgress >= goal.target } }
+    val animatedProgress by animateFloatAsState(
+        targetValue = currentProgress.toFloat() / goal.target.toFloat(),
+        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+    )
 
-    // Автоматическое завершение цели
-    LaunchedEffect(currentProgress) {
-        if (currentProgress >= goal.target && !checkedState) {
-            firestore.collection("fitness_goals").document(goal.id)
-                .update(mapOf(
-                    "isCompleted" to true,
-                    "currentProgress" to goal.target
-                ))
-                .addOnSuccessListener {
-                    checkedState = true
-                    currentProgress = goal.target
-                }
-        }
-    }
-
-    // Обновление прогресса с проверкой
     fun updateProgress(newValue: Long) {
         if (newValue > goal.target) return
 
         firestore.collection("fitness_goals").document(goal.id)
-            .update("currentProgress", newValue)
+            .update(mapOf(
+                "currentProgress" to newValue,
+                "isCompleted" to (newValue >= goal.target)
+            ))
             .addOnSuccessListener {
-                currentProgress = newValue.toInt()
+                currentProgress = newValue
+                if (newValue >= goal.target) {
+                    moveGoalToFinished(goal.copy(currentProgress = newValue), firestore)
+                }
             }
     }
 
-    // Таймер для времени
-    LaunchedEffect(isTimerRunning) {
-        while (isTimerRunning && currentProgress < goal.target) {
-            delay(1000L)
-            updateProgress(currentProgress + 1L)
+    LaunchedEffect(isCompleted) {
+        if (isCompleted && !goal.isCompleted) {
+            moveGoalToFinished(goal.copy(currentProgress = currentProgress), firestore)
         }
-        isTimerRunning = false
+    }
+
+    // Таймер для TIME
+    LaunchedEffect(isTimerRunning) {
+        if (isTimerRunning) {
+            while (isTimerRunning) {
+                delay(1000L)
+                if (currentProgress < goal.target) {
+                    updateProgress(currentProgress + 1)
+                } else {
+                    isTimerRunning = false
+                    break
+                }
+            }
+        }
+    }
+
+    // Обработчик достижения цели
+    LaunchedEffect(currentProgress) {
+        if (currentProgress >= goal.target && !goal.isCompleted) {
+            moveGoalToFinished(goal.copy(currentProgress = currentProgress), firestore)
+        }
     }
 
     Card(
@@ -145,46 +159,27 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
             .fillMaxWidth()
             .padding(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (checkedState) Color.LightGray.copy(alpha = 0.3f)
-            else MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
-                    checked = checkedState,
-                    onCheckedChange = { isChecked ->
-                        if (isChecked) {
-                            firestore.collection("fitness_goals").document(goal.id)
-                                .update(mapOf(
-                                    "isCompleted" to true,
-                                    "currentProgress" to goal.target
-                                ))
-                                .addOnSuccessListener {
-                                    checkedState = true
-                                    currentProgress = goal.target
-                                }
-                        } else {
-                            firestore.collection("fitness_goals").document(goal.id)
-                                .update("isCompleted", false)
-                                .addOnSuccessListener { checkedState = false }
-                        }
-                    }
+                    checked = isCompleted,
+                    onCheckedChange = null,
+                    enabled = false,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(goal.title, modifier = Modifier.weight(1f))
                 IconButton(
-                    onClick = {
-                        firestore.collection("fitness_goals")
-                            .document(goal.id)
-                            .delete()
-                    }
+                    onClick = { firestore.collection("fitness_goals").document(goal.id).delete() }
                 ) {
                     Icon(Icons.Default.Delete, "Удалить")
                 }
             }
 
             LinearProgressIndicator(
-                progress = (currentProgress.toFloat() / goal.target.toFloat()).coerceIn(0f, 1f),
+                progress = animatedProgress.coerceIn(0f, 1f),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
@@ -194,39 +189,92 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
             Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.plannedDate.seconds * 1000))}")
 
             when (goal.type) {
-                FitnessGoal.GoalType.REPS -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(
-                            onClick = { updateProgress((currentProgress - 1L).coerceAtLeast(0)) }
-                        ) {
-                            Icon(Icons.Default.Remove, "-")
-                        }
-                        Text("$currentProgress")
-                        IconButton(
-                            onClick = { updateProgress(currentProgress + 1L) }
-                        ) {
-                            Icon(Icons.Default.Add, "+")
-                        }
-                    }
-                }
-                FitnessGoal.GoalType.TIME -> {
-                    Button(
-                        onClick = { isTimerRunning = !isTimerRunning },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isTimerRunning) Color.Red else Color.Green
-                        ),
-                        enabled = !checkedState
-                    ) {
-                        Text(if (isTimerRunning) "Пауза" else "Старт")
-                    }
-                }
+                FitnessGoal.GoalType.REPS -> RepsControl(
+                    current = currentProgress,
+                    onUpdate = { newValue ->
+                        updateProgress(newValue) // Непосредственно вызываем обновление в Firebase
+                    },
+                    max = goal.target
+                )
+                FitnessGoal.GoalType.TIME -> TimeControl(
+                    isRunning = isTimerRunning,
+                    onToggle = { isTimerRunning = it },
+                    current = currentProgress,
+                    onUpdate = { newValue ->
+                        updateProgress(newValue) // Аналогично для TimeControl
+                    },
+                    max = goal.target
+                )
             }
         }
     }
 }
+
+@Composable
+fun RepsControl(current: Long, onUpdate: (Long) -> Unit, max: Long) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = { onUpdate((current - 1).coerceAtLeast(0)) },
+            enabled = current > 0
+        ) { Icon(Icons.Default.Remove, "-") }
+
+        Text("$current", modifier = Modifier.padding(horizontal = 8.dp))
+
+        IconButton(
+            onClick = { onUpdate((current + 1).coerceAtMost(max)) },
+            enabled = current < max
+        ) { Icon(Icons.Default.Add, "+") }
+    }
+}
+
+@Composable
+fun TimeControl(
+    isRunning: Boolean,
+    onToggle: (Boolean) -> Unit,
+    current: Long,
+    onUpdate: (Long) -> Unit,
+    max: Long
+) {
+//    LaunchedEffect(isRunning) {
+//        while (isRunning && current < max) {
+//            delay(1000L)
+//            onUpdate(current + 1) // Теперь это будет вызывать updateProgress
+//        }
+//        if (current >= max) onToggle(false)
+//    }
+
+    Button(
+        onClick = { onToggle(!isRunning) },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isRunning) Color.Red else Color.Green
+        ),
+        enabled = current < max
+    ) {
+        Icon(
+            imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = if (isRunning) "Пауза" else "Старт"
+        )
+    }
+}
+
+@Composable
+fun FinishedGoalItem(goal: FitnessGoal) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.LightGray.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(goal.title, style = MaterialTheme.typography.titleMedium)
+            Text("Выполнено: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.createdDate.seconds * 1000))}")
+            Text("Цель: ${goal.target} ${if (goal.type == FitnessGoal.GoalType.REPS) "повторений" else "секунд"}")
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -378,5 +426,27 @@ fun DatePickerDialog(
         }
     ) {
         DatePicker(state = datePickerState)
+    }
+}
+
+private fun moveGoalToFinished(goal: FitnessGoal, firestore: FirebaseFirestore) {
+    val finishedGoal = goal.copy(
+        isCompleted = true,
+        currentProgress = goal.target,
+        createdDate = Timestamp.now()
+    )
+
+    firestore.runBatch { batch ->
+        batch.set(firestore.collection("finished_goals").document(), finishedGoal.toMap())
+        batch.delete(firestore.collection("fitness_goals").document(goal.id))
+    }.addOnCompleteListener {
+        if (it.isSuccessful) {
+            Log.d("FIREBASE", "Цель перемещена")
+        } else {
+            Log.e("FIREBASE", "Ошибка: ${it.exception}")
+            // Откатываем статус
+            firestore.collection("fitness_goals").document(goal.id)
+                .update("isCompleted", false)
+        }
     }
 }

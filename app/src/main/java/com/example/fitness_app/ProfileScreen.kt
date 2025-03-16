@@ -10,12 +10,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
 @Composable
-fun ProfileScreen(userId: String, onLogout: () -> Unit) {
+fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavController) {
     var height by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var goalWeight by remember { mutableStateOf("") }
@@ -150,6 +152,17 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Сохранить изменения")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                navController.navigate("bmi_calculator")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Рассчитать ИМТ")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
