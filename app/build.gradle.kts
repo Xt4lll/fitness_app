@@ -41,6 +41,7 @@ android {
 }
 
 dependencies {
+    implementation ("androidx.work:work-runtime-ktx:2.7.1")
     implementation ("com.google.firebase:firebase-firestore-ktx:24.9.1")
     implementation ("com.google.firebase:firebase-auth-ktx:22.3.0")
     implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
