@@ -46,7 +46,6 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
     var age by remember { mutableStateOf("") }
     var bmi by remember { mutableStateOf(0f) }
 
-    // Валидация полей
     val heightValid = remember {
         derivedStateOf { height.toFloatOrNull()?.let { it > 0 } ?: false }
     }

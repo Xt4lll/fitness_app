@@ -25,17 +25,20 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 class StepService : Service(), SensorEventListener {
-
     private lateinit var sensorManager: SensorManager
     private var initialSteps = -1f
+    private var currentUserId: String? = null
 
     companion object {
         private var _stepFlow = MutableStateFlow(0)
         val stepFlow: StateFlow<Int> = _stepFlow.asStateFlow()
 
-        fun resetSteps(context: Context) {
+        fun resetStepsForNewUser() {
             _stepFlow.tryEmit(0)
-            saveSteps(context, 0)
+        }
+
+        fun setSteps(steps: Int) {
+            _stepFlow.tryEmit(steps)
         }
 
         fun saveSteps(context: Context, steps: Int) {
@@ -46,6 +49,67 @@ class StepService : Service(), SensorEventListener {
                 .document("$userId-$date")
                 .set(mapOf("userId" to userId, "steps" to steps, "date" to date))
         }
+
+        fun loadStepsForCurrentUser(context: Context) {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            FirebaseFirestore.getInstance()
+                .collection("steps")
+                .document("$userId-$date")
+                .get()
+                .addOnSuccessListener { document ->
+                    val steps = document.getLong("steps")?.toInt() ?: 0
+                    _stepFlow.tryEmit(steps)
+                }
+        }
+
+        fun loadStepsHistory(
+            context: Context,
+            callback: (List<Pair<String, Int>>) -> Unit
+        ) {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            val calendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+            val dates = List(7) {
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            }.reversed()
+
+            FirebaseFirestore.getInstance().collection("steps")
+                .whereEqualTo("userId", userId)
+                .whereIn("date", dates)
+                .get()
+                .addOnSuccessListener { result ->
+                    val stepsMap = result.documents.associate { doc ->
+                        Pair(
+                            doc.getString("date")!!,
+                            (doc.getLong("steps")?.toInt() ?: 0)
+                        )
+                    }
+                    val filledSteps = dates.map { date ->
+                        Pair(date, stepsMap[date] ?: 0)
+                    }
+                    callback(filledSteps)
+                }
+                .addOnFailureListener { e ->
+                    Log.e("StepService", "Error loading steps history", e)
+                    callback(emptyList())
+                }
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (userId != currentUserId) {
+            currentUserId = userId
+            initialSteps = event?.values?.get(0) ?: 0f
+            loadStepsForCurrentUser(this)
+        }
+
+        if (initialSteps < 0) initialSteps = event?.values?.get(0) ?: 0f
+        val stepsToday = (event?.values?.get(0) ?: 0f) - initialSteps
+        _stepFlow.tryEmit(stepsToday.toInt())
+        saveSteps(this, stepsToday.toInt())
     }
 
     override fun onCreate() {
@@ -61,15 +125,6 @@ class StepService : Service(), SensorEventListener {
 
         startForegroundService()
         scheduleDailyReset(this)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (initialSteps < 0) {
-            initialSteps = event?.values?.get(0) ?: 0f
-        }
-        val stepsToday = (event?.values?.get(0) ?: 0f) - initialSteps
-        _stepFlow.tryEmit(stepsToday.toInt())
-        saveSteps(this, stepsToday.toInt())
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

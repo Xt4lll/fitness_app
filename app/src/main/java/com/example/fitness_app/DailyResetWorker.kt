@@ -19,8 +19,7 @@ class DailyResetWorker(context: Context, workerParams: WorkerParameters) :
             .document("$userId-$date")
             .set(mapOf("userId" to userId, "steps" to 0, "date" to date))
 
-        StepService.resetSteps(applicationContext)
-
+        //StepService.resetSteps(applicationContext)
         return Result.success()
     }
 }

@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +31,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +43,15 @@ fun StepCounterScreen() {
 
     var dailyGoal by remember { mutableStateOf(10000) }
     var steps by remember { mutableStateOf(0) }
+    var stepsHistory by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
 
     LaunchedEffect(userId) {
         val snapshot = firestore.collection("users").document(userId).get().await()
         dailyGoal = snapshot.getLong("daily_step_goal")?.toInt() ?: 10000
+
+        StepService.loadStepsHistory(context) { history ->
+            stepsHistory = history
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -72,7 +80,7 @@ fun StepCounterScreen() {
         animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing)
     )
 
-    RequestPermissionIfNeeded()
+    //RequestPermissionIfNeeded()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Шагомер") }) }
@@ -107,16 +115,18 @@ fun StepCounterScreen() {
             Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Calories", tint = Color.Red)
+                    Icon(Icons.Filled.LocalFireDepartment, "Calories", tint = Color.Red)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Калории: $animatedCalories", fontSize = 18.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.DirectionsWalk, contentDescription = "Steps", tint = Color.Blue)
+                    Icon(Icons.Filled.DirectionsWalk, "Steps", tint = Color.Blue)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Шаги: $animatedSteps/$dailyGoal", fontSize = 18.sp)
                 }
             }
+
+            StepHistoryChart(stepsHistory = stepsHistory)
 
             Spacer(modifier = Modifier.height(24.dp))
             Column(
@@ -140,21 +150,76 @@ fun StepCounterScreen() {
 }
 
 @Composable
-fun RequestPermissionIfNeeded() {
-    val context = LocalContext.current
-    val permission = Manifest.permission.ACTIVITY_RECOGNITION
+private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
+    if (stepsHistory.isEmpty()) return
 
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        Log.d("Permissions", "Разрешение ACTIVITY_RECOGNITION: $isGranted")
-    }
+    val maxSteps = stepsHistory.maxOfOrNull { it.second }?.takeIf { it > 0 } ?: 1
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val labelFormat = SimpleDateFormat("dd.MM", Locale.getDefault())
 
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            requestPermissionLauncher.launch(permission)
+            Text(
+                text = "Активность за неделю",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                stepsHistory.forEach { (date, steps) ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(40.dp)
+                    ) {
+                        val height = (steps.toFloat() / maxSteps * 120).dp
+
+                        Text(
+                            text = "$steps",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .height(height)
+                                .width(24.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = MaterialTheme.shapes.small)
+                        )
+
+                        Text(
+                            text = try {
+                                labelFormat.format(dateFormat.parse(date))
+                            } catch (e: Exception) {
+                                date.substring(5)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
