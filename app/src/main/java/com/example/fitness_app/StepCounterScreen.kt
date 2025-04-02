@@ -80,7 +80,7 @@ fun StepCounterScreen() {
         animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing)
     )
 
-    //RequestPermissionIfNeeded()
+    RequestPermissionIfNeeded()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Шагомер") }) }
@@ -220,6 +220,26 @@ private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun RequestPermissionIfNeeded() {
+    val context = LocalContext.current
+    val permission = Manifest.permission.ACTIVITY_RECOGNITION
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        Log.d("Permissions", "Разрешение ACTIVITY_RECOGNITION: $isGranted")
+    }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(permission)
         }
     }
 }
