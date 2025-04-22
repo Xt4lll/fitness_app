@@ -288,7 +288,7 @@ fun AddGoalDialog(
     var goalType by remember { mutableStateOf(FitnessGoal.GoalType.REPS) }
     var plannedDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var isDateValid by remember { mutableStateOf(true) } // Флаг для валидации даты
+    var isDateValid by remember { mutableStateOf(true) }
 
     if (showDatePicker) {
         DatePickerDialog(
