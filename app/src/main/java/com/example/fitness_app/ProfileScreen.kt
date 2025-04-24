@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -27,7 +28,9 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
 
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
+    val authViewModel: AuthViewModel = viewModel()
 
+    // Загрузка данных пользователя
     LaunchedEffect(userId) {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -35,74 +38,86 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     height = document.getDouble("height")?.toString() ?: ""
                     weight = document.getDouble("weight")?.toString() ?: ""
                     goalWeight = document.getDouble("goal_weight")?.toString() ?: ""
-                    dailyStepGoal = document.getDouble("daily_step_goal")?.toInt()?.toString() ?: ""
+                    dailyStepGoal = document.getLong("daily_step_goal")?.toString() ?: "10000"
                     nickname = document.getString("nickname") ?: ""
                 }
             }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = nickname, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 32.dp))
+        Text(
+            text = nickname,
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
 
+        // Поле "Рост"
         OutlinedTextField(
             value = height,
             onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) height = it },
             label = { Text("Рост (см)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Поле "Вес"
         OutlinedTextField(
             value = weight,
             onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) weight = it },
             label = { Text("Вес (кг)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Поле "Цель по весу"
         OutlinedTextField(
             value = goalWeight,
             onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) goalWeight = it },
             label = { Text("Цель по весу (кг)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Поле "Цель по шагам"
         OutlinedTextField(
             value = dailyStepGoal,
             onValueChange = { if (it.matches(Regex("^\\d*\$"))) dailyStepGoal = it },
             label = { Text("Цель по шагам") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Кнопка сохранения изменений
         Button(
             onClick = {
                 val userData = hashMapOf(
                     "height" to height.toDoubleOrNull(),
                     "weight" to weight.toDoubleOrNull(),
                     "goal_weight" to goalWeight.toDoubleOrNull(),
-                    "daily_step_goal" to dailyStepGoal.toIntOrNull()
+                    "daily_step_goal" to dailyStepGoal.toLongOrNull()
                 )
 
-                db.collection("users").document(userId).set(userData, SetOptions.merge())
+                db.collection("users").document(userId)
+                    .set(userData, SetOptions.merge())
                     .addOnSuccessListener {
                         Toast.makeText(context, "Данные обновлены!", Toast.LENGTH_SHORT).show()
                     }
                     .addOnFailureListener { e ->
-                        Toast.makeText(context, "Ошибка обновления данных: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
             },
             modifier = Modifier.fillMaxWidth()
@@ -112,10 +127,9 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Кнопка перехода к BMI калькулятору
         Button(
-            onClick = {
-                navController.navigate("bmi_calculator")
-            },
+            onClick = { navController.navigate("bmi_calculator") },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Рассчитать ИМТ")
@@ -123,12 +137,34 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Кнопка перехода к подпискам
+        Button(
+            onClick = { navController.navigate("subscriptions") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Мои подписки")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Кнопка выхода
         Button(
             onClick = {
-                logout(context, onLogout)
+                authViewModel.logout(
+                    context = context,
+                    onSuccess = {
+                        FirebaseAuth.getInstance().signOut()
+                        onLogout()
+                    },
+                    onFailure = { error ->
+                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                    }
+                )
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error
+            )
         ) {
             Text("Выйти из аккаунта")
         }
