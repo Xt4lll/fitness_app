@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,15 +36,28 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.navigation.NavController
 import com.google.firebase.firestore.DocumentSnapshot
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil.compose.rememberAsyncImagePainter
+import com.imagekit.android.ImageKit
+import com.imagekit.android.entity.TransformationPosition
+import com.imagekit.android.entity.UploadPolicy
+import coil.request.ImageRequest
 
 fun DocumentSnapshot.toUser() = User(
     userId = id,
     email = getString("email") ?: "",
     nickname = getString("nickname") ?: "No name",
-    height = getDouble("height") ?: 0.0,
-    weight = getDouble("weight") ?: 0.0,
-    goalWeight = getDouble("goal_weight") ?: 0.0,
-    dailyStepGoal = getLong("daily_step_goal")?.toInt() ?: 10000,
+    photoUrl = getString("photoUrl"),
+    height = getDouble("height"),
+    weight = getDouble("weight"),
+    goalWeight = getDouble("goal_weight"),
+    dailyStepGoal = getLong("daily_step_goal")?.toInt(),
     createdAt = getTimestamp("created_at") ?: com.google.firebase.Timestamp.now()
 )
 
@@ -153,9 +167,37 @@ fun AuthorItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(author.nickname, style = MaterialTheme.typography.titleMedium)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                val avatarUrl = author.photoUrl?.let { url ->
+                    if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
+                } ?: ""
+
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        ImageRequest.Builder(LocalContext.current)
+                            .data(avatarUrl)
+                            .placeholder(R.drawable.ic_default_avatar)
+                            .error(R.drawable.ic_default_avatar)
+                            .build()
+                    ),
+                    contentDescription = "Аватар автора",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Text(
+                    text = author.nickname,
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
+            
             if (isSubscribed) {
                 OutlinedButton(onClick = onUnsubscribe) { Text("Отписаться") }
             } else {

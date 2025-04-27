@@ -15,6 +15,7 @@ navigationCompose = "2.8.8"
 firebaseStorageKtx = "21.0.1"
 runtimeLivedata = "1.7.8"
 runtime = "1.0.0-alpha03"
+playServicesBase = "18.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +38,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorageKtx" }
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 androidx-runtime = { group = "androidx.xr.runtime", name = "runtime", version.ref = "runtime" }
+play-services-base = { group = "com.google.android.gms", name = "play-services-base", version.ref = "playServicesBase" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

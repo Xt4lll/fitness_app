@@ -61,7 +61,8 @@ fun SubscriptionsScreen(userId: String, navController: NavController) {
                                 authors.add(
                                     User(
                                         userId = doc.id,
-                                        nickname = doc.getString("nickname") ?: "No name"
+                                        nickname = doc.getString("nickname") ?: "Без имени",
+                                        photoUrl = doc.getString("photoUrl")
                                     )
                                 )
                             }
@@ -94,8 +95,11 @@ fun SubscriptionsScreen(userId: String, navController: NavController) {
     } else {
         LazyColumn(Modifier.padding(16.dp)) {
             items(authors) { author ->
+                val avatarUrl = author.photoUrl?.let { url ->
+                    if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
+                } ?: ""
                 AuthorItem(
-                    author = author,
+                    author = author.copy(photoUrl = avatarUrl),
                     isSubscribed = subscriptions.value.contains(author.userId), // Используем актуальное состояние
                     onSubscribe = {
                         subscribeToAuthor(userId, author) {

@@ -41,6 +41,11 @@ android {
 }
 
 dependencies {
+
+    implementation ("com.github.imagekit-developer.imagekit-android:imagekit-android:3.0.0")
+    implementation("org.json:json:20231013")
+    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation ("androidx.work:work-runtime-ktx:2.7.1")
     implementation ("com.google.firebase:firebase-firestore-ktx:24.9.1")
     implementation ("com.google.firebase:firebase-auth-ktx:22.3.0")
@@ -48,7 +53,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.5.4")
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
     implementation("io.coil-kt:coil-compose:2.4.0")
-    implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -63,6 +67,9 @@ dependencies {
     implementation(libs.firebase.storage.ktx)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.runtime)
+    implementation(libs.play.services.base)
+    implementation(libs.play.services.base)
+    implementation(libs.play.services.base)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

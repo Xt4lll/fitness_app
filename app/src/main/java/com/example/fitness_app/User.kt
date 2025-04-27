@@ -14,19 +14,22 @@ data class User(
     @get:PropertyName("nickname")
     val nickname: String = "",
 
+    @get:PropertyName("photoUrl")
+    val photoUrl: String? = null,
+
     // Физические параметры
     @get:PropertyName("height")
-    val height: Double = 0.0, // в сантиметрах
+    val height: Double? = null, // в сантиметрах
 
     @get:PropertyName("weight")
-    val weight: Double = 0.0, // в килограммах
+    val weight: Double? = null, // в килограммах
 
     @get:PropertyName("goal_weight")
-    val goalWeight: Double = 0.0, // целевой вес
+    val goalWeight: Double? = null, // целевой вес
 
     // Цели и активность
     @get:PropertyName("daily_step_goal")
-    val dailyStepGoal: Int = 10000, // цель по шагам
+    val dailyStepGoal: Int? = null, // цель по шагам
 
     // Метаданные
     @get:PropertyName("created_at")
