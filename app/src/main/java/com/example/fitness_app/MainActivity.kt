@@ -25,6 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fitness_app.VideoPlayerScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,8 +138,15 @@ fun FitnessApp() {
                 composable("subscriptions") {
                     SubscriptionsScreen(userId = userId!!, navController = navController)
                 }
-                composable("authors") {
-                    AuthorsScreen(userId = userId!!, navController = navController)
+                composable("video_player/{videoId}") { backStackEntry ->
+                    val videoId = backStackEntry.arguments?.getString("videoId") ?: return@composable
+                    VideoPlayerScreen(videoId = videoId, navController = navController)
+                }
+                composable("creative_studio") {
+                    CreativeStudioScreen(userId = userId!!, navController = navController)
+                }
+                composable("add_video") {
+                    AddVideoScreen(userId = userId!!, navController = navController)
                 }
             }
         }

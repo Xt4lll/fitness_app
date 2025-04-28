@@ -16,6 +16,7 @@ firebaseStorageKtx = "21.0.1"
 runtimeLivedata = "1.7.8"
 runtime = "1.0.0-alpha03"
 playServicesBase = "18.0.1"
+media3CommonKtx = "1.6.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,7 @@ firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 androidx-runtime = { group = "androidx.xr.runtime", name = "runtime", version.ref = "runtime" }
 play-services-base = { group = "com.google.android.gms", name = "play-services-base", version.ref = "playServicesBase" }
+androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

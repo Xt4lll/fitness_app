@@ -41,7 +41,8 @@ android {
 }
 
 dependencies {
-
+    implementation ("androidx.media3:media3-exoplayer:1.6.1")
+    implementation ("androidx.media3:media3-ui:1.6.1")
     implementation ("com.github.imagekit-developer.imagekit-android:imagekit-android:3.0.0")
     implementation("org.json:json:20231013")
     implementation("androidx.activity:activity-compose:1.8.0")

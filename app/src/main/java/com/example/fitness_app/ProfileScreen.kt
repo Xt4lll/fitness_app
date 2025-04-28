@@ -29,15 +29,9 @@ import com.google.firebase.firestore.SetOptions
 import com.imagekit.android.ImageKit
 import com.imagekit.android.entity.TransformationPosition
 import com.imagekit.android.entity.UploadPolicy
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Credentials
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okio.IOException
 import org.json.JSONObject
 import java.io.File
@@ -61,13 +55,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     val scrollState = rememberScrollState()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    // Get user email
     LaunchedEffect(Unit) {
         userEmail = currentUser?.email ?: ""
-    }
-
-    // Инициализация ImageKit
-    LaunchedEffect(Unit) {
         ImageKit.init(
             context = context,
             publicKey = "public_h842XCc32GFUkOupuWPd6WGOnIA=",
@@ -103,7 +92,6 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
         }
     }
 
-    // Загрузка данных пользователя
     LaunchedEffect(userId) {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -129,7 +117,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp),
+                .padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -158,9 +146,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     )
                 }
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
             Column {
                 Text(
                     text = nickname.ifEmpty { "Без имени" },
@@ -181,8 +167,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = weight,
@@ -191,8 +176,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = goalWeight,
@@ -201,8 +185,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = dailyStepGoal,
@@ -211,8 +194,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
@@ -222,7 +204,6 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     "goal_weight" to goalWeight.toDoubleOrNull(),
                     "daily_step_goal" to dailyStepGoal.toLongOrNull()
                 )
-
                 db.collection("users").document(userId)
                     .set(userData, SetOptions.merge())
                     .addOnSuccessListener {
@@ -236,8 +217,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
         ) {
             Text("Сохранить изменения")
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = { navController.navigate("bmi_calculator") },
@@ -245,8 +225,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
         ) {
             Text("Рассчитать ИМТ")
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = { navController.navigate("subscriptions") },
@@ -254,8 +233,15 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
         ) {
             Text("Мои подписки")
         }
+        Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { navController.navigate("creative_studio") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Творческая студия")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
@@ -280,7 +266,6 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     }
 }
 
-// Функция для загрузки изображения в ImageKit
 private fun uploadImageToImageKit(
     context: Context,
     userId: String,
@@ -333,7 +318,6 @@ private fun uploadImageToImageKit(
                 val uploadedUrl = json.optString("url", null)
 
                 if (uploadedUrl != null) {
-                    // Сохраняем в Firestore
                     val db = FirebaseFirestore.getInstance()
                     db.collection("users").document(userId)
                         .set(mapOf("photoUrl" to uploadedUrl), SetOptions.merge())
@@ -361,7 +345,6 @@ private fun uploadImageToImageKit(
     })
 }
 
-// Функция для обновления URL аватара в Firebase
 private fun updateUserAvatar(
     db: FirebaseFirestore,
     userId: String,
