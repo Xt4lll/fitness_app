@@ -48,6 +48,7 @@ import com.imagekit.android.ImageKit
 import com.imagekit.android.entity.TransformationPosition
 import com.imagekit.android.entity.UploadPolicy
 import coil.request.ImageRequest
+import androidx.compose.foundation.clickable
 
 fun DocumentSnapshot.toUser() = User(
     userId = id,
@@ -140,7 +141,8 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                         author = author,
                         isSubscribed = subscriptions.value.contains(author.userId),
                         onSubscribe = { subscribeToAuthor(userId, author) {} },
-                        onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} }
+                        onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
+                        onClick = { navController.navigate("author_videos/${author.userId}") }
                     )
                 }
             }
@@ -153,12 +155,14 @@ fun AuthorItem(
     author: User,
     isSubscribed: Boolean,
     onSubscribe: () -> Unit,
-    onUnsubscribe: () -> Unit
+    onUnsubscribe: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier

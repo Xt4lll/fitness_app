@@ -110,7 +110,8 @@ fun SubscriptionsScreen(userId: String, navController: NavController) {
                         unsubscribeFromAuthor(userId, author) {
                             // Автоматически обновится через snapshotListener
                         }
-                    }
+                    },
+                    onClick = { navController.navigate("author_videos/${author.userId}") }
                 )
             }
         }

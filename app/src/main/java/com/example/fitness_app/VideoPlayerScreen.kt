@@ -28,9 +28,9 @@ import androidx.media3.ui.PlayerView
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.navigation.NavController
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.foundation.clickable
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -43,8 +43,17 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     var duration by remember { mutableStateOf(0L) }
     var showRewind by remember { mutableStateOf(false) }
     var showForward by remember { mutableStateOf(false) }
+    var showControls by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
+
+    // Auto-hide controls after 3 seconds
+    LaunchedEffect(showControls) {
+        if (showControls) {
+            delay(3000)
+            showControls = false
+        }
+    }
 
     // Загрузка данных видео
     LaunchedEffect(videoId) {
@@ -163,6 +172,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .background(Color.Black)
+                    .clickable { showControls = !showControls }
             ) {
                 exoPlayer?.let { player ->
                     AndroidView(
@@ -210,66 +220,76 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                         }
                     }
                 }
-                // Элементы управления
+                // Controls with animation
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Bottom
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    AnimatedVisibility(
+                        visible = showControls,
+                        enter = fadeIn(),
+                        exit = fadeOut()
                     ) {
-                        Text(
-                            text = formatTime(currentPosition),
-                            color = Color.White,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                            modifier = Modifier.width(48.dp),
-                            textAlign = TextAlign.Center
-                        )
-                        Slider(
-                            value = if (duration > 0) currentPosition / duration.toFloat() else 0f,
-                            onValueChange = { fraction ->
-                                val newPosition = (fraction * duration).roundToInt().toLong()
-                                exoPlayer?.seekTo(newPosition)
-                                currentPosition = newPosition
-                            },
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = Color.White
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = formatTime(duration),
-                            color = Color.White,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                            modifier = Modifier.width(48.dp),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.Black.copy(alpha = 0.5f))
+                                .padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatTime(currentPosition),
+                                    color = Color.White,
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                    modifier = Modifier.width(48.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                                Slider(
+                                    value = if (duration > 0) currentPosition / duration.toFloat() else 0f,
+                                    onValueChange = { fraction ->
+                                        val newPosition = (fraction * duration).roundToInt().toLong()
+                                        exoPlayer?.seekTo(newPosition)
+                                        currentPosition = newPosition
+                                    },
+                                    valueRange = 0f..1f,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = formatTime(duration),
+                                    color = Color.White,
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                    modifier = Modifier.width(48.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { seekBy(-10_000) }) {
-                            Icon(Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White)
-                        }
-                        IconButton(onClick = { togglePlayPause() }) {
-                            Icon(
-                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
-                                tint = Color.White
-                            )
-                        }
-                        IconButton(onClick = { seekBy(10_000) }) {
-                            Icon(Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { seekBy(-10_000) }) {
+                                    Icon(Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White)
+                                }
+                                IconButton(onClick = { togglePlayPause() }) {
+                                    Icon(
+                                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
+                                        tint = Color.White
+                                    )
+                                }
+                                IconButton(onClick = { seekBy(10_000) }) {
+                                    Icon(Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White)
+                                }
+                            }
                         }
                     }
                 }

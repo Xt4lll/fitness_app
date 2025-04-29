@@ -41,6 +41,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
     implementation ("androidx.media3:media3-exoplayer:1.6.1")
     implementation ("androidx.media3:media3-ui:1.6.1")
     implementation ("com.github.imagekit-developer.imagekit-android:imagekit-android:3.0.0")
