@@ -20,26 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
-import com.imagekit.android.ImageKit
-import com.imagekit.android.entity.TransformationPosition
-import com.imagekit.android.entity.UploadPolicy
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import org.json.JSONObject
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
@@ -48,11 +39,16 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.text.style.TextOverflow
 import java.text.SimpleDateFormat
 import java.util.*
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.os.Handler
+import android.os.Looper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun CreativeStudioScreen(userId: String, navController: NavController) {
     var videos by remember { mutableStateOf(listOf<Video>()) }
-    val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
     LaunchedEffect(userId) {
@@ -69,7 +65,6 @@ fun CreativeStudioScreen(userId: String, navController: NavController) {
                         description = document.getString("description") ?: "",
                         userId = document.getString("userId") ?: "",
                         videoUrl = document.getString("videoUrl") ?: "",
-                        thumbnailUrl = document.getString("thumbnailUrl") ?: "",
                         tags = (document.get("tags") as? List<String>) ?: emptyList(),
                         views = document.getLong("views") ?: 0,
                         uploadDate = document.getLong("uploadDate") ?: System.currentTimeMillis()
@@ -119,6 +114,22 @@ fun CreativeStudioScreen(userId: String, navController: NavController) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun VideoCard(video: Video, onClick: () -> Unit) {
+    var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Загружаем превью из видео
+    LaunchedEffect(video.videoUrl) {
+        withContext(Dispatchers.IO) {
+            try {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(video.videoUrl)
+                thumbnail = retriever.getFrameAtTime(0)
+                retriever.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,15 +143,21 @@ fun VideoCard(video: Video, onClick: () -> Unit) {
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
             ) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        model = video.thumbnailUrl,
-                        error = null
-                    ),
-                    contentDescription = "Превью видео",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                thumbnail?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Превью видео",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } ?: Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
                 
                 Box(
                     modifier = Modifier
@@ -253,7 +270,7 @@ fun AddVideoScreen(userId: String, navController: NavController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Назад"
                         )
                     }
@@ -371,7 +388,6 @@ private fun uploadVideoToImageKit(
     tags: List<String>,
     onComplete: (Boolean, String?) -> Unit
 ) {
-    val publicApiKey = "public_h842XCc32GFUkOupuWPd6WGOnIA="
     val uploadUrl = "https://upload.imagekit.io/api/v1/files/upload"
     val privateApiKey = "private_DQx8pRGWDdYj2K04lEm7kGOzD1M="
     val filename = "video_${System.currentTimeMillis()}_$userId"
@@ -383,7 +399,6 @@ private fun uploadVideoToImageKit(
         return
     }
 
-    // Загрузка видео
     val videoRequestBody = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
         .addFormDataPart(
@@ -406,7 +421,7 @@ private fun uploadVideoToImageKit(
 
     client.newCall(videoRequest).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
+            Handler(Looper.getMainLooper()).post {
                 onComplete(false, null)
             }
         }
@@ -416,19 +431,14 @@ private fun uploadVideoToImageKit(
                 val bodyString = response.body?.string()
                 val json = JSONObject(bodyString ?: "")
                 val videoUrl = json.optString("url", null)
-                val fileId = json.optString("fileId", null)
 
-                if (videoUrl != null && fileId != null) {
-                    // Создание превью для видео
-                    val thumbnailUrl = "https://ik.imagekit.io/your_imagekit_id/tr:w-640,h-360,f-jpg/$fileId"
-                    
+                if (videoUrl != null) {
                     val db = FirebaseFirestore.getInstance()
                     val videoData = mapOf(
                         "title" to title,
                         "description" to description,
                         "userId" to userId,
                         "videoUrl" to videoUrl,
-                        "thumbnailUrl" to thumbnailUrl,
                         "tags" to tags,
                         "views" to 0,
                         "uploadDate" to System.currentTimeMillis()
@@ -437,22 +447,22 @@ private fun uploadVideoToImageKit(
                     db.collection("videos")
                         .add(videoData)
                         .addOnSuccessListener {
-                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            Handler(Looper.getMainLooper()).post {
                                 onComplete(true, videoUrl)
                             }
                         }
                         .addOnFailureListener { e ->
-                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            Handler(Looper.getMainLooper()).post {
                                 onComplete(false, null)
                             }
                         }
                 } else {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    Handler(Looper.getMainLooper()).post {
                         onComplete(false, null)
                     }
                 }
             } else {
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Handler(Looper.getMainLooper()).post {
                     onComplete(false, null)
                 }
             }

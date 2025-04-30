@@ -6,7 +6,6 @@ data class Video(
     val description: String = "",
     val userId: String = "",
     val videoUrl: String = "",
-    val thumbnailUrl: String = "",
     val tags: List<String> = emptyList(),
     val views: Long = 0,
     val uploadDate: Long = System.currentTimeMillis()

@@ -1,7 +1,6 @@
 package com.example.fitness_app
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +29,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import androidx.navigation.NavController
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
+import androidx.media3.common.Player
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -47,15 +48,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // Auto-hide controls after 3 seconds
-    LaunchedEffect(showControls) {
-        if (showControls) {
-            delay(3000)
-            showControls = false
-        }
-    }
-
-    // Загрузка данных видео
+    // Загружаем данные видео без обновления просмотров
     LaunchedEffect(videoId) {
         db.collection("videos")
             .document(videoId)
@@ -68,7 +61,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                         description = document.getString("description") ?: "",
                         userId = document.getString("userId") ?: "",
                         videoUrl = document.getString("videoUrl") ?: "",
-                        thumbnailUrl = document.getString("thumbnailUrl") ?: "",
                         tags = (document.get("tags") as? List<String>) ?: emptyList(),
                         views = document.getLong("views") ?: 0,
                         uploadDate = document.getLong("uploadDate") ?: 0
@@ -77,7 +69,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             }
     }
 
-    // Инициализация ExoPlayer
+    // Инициализация ExoPlayer и обновление просмотров при первом воспроизведении
     LaunchedEffect(video?.videoUrl) {
         video?.videoUrl?.let { url ->
             val player = ExoPlayer.Builder(context).build()
@@ -87,15 +79,48 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             player.playWhenReady = isPlaying
             exoPlayer = player
 
-            player.addListener(object : androidx.media3.common.Player.Listener {
+            var viewUpdated = false
+            player.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY && !viewUpdated) {
+                        // Обновляем просмотры только при первом начале воспроизведения
+                        viewUpdated = true
+                        video?.let { currentVideo ->
+                            val currentViews = currentVideo.views
+                            val updatedViews = currentViews + 1
+                            
+                            db.collection("videos")
+                                .document(videoId)
+                                .update("views", updatedViews)
+                                .addOnSuccessListener {
+                                    video = currentVideo.copy(views = updatedViews)
+                                    println("DEBUG: Views updated in Firebase to $updatedViews")
+                                }
+                                .addOnFailureListener { e ->
+                                    println("DEBUG: Failed to update views in Firebase: ${e.message}")
+                                }
+                        }
+                    }
+                    if (playbackState == Player.STATE_READY) {
+                        duration = player.duration
+                    }
+                }
+
                 override fun onIsPlayingChanged(isPlayingNow: Boolean) {
                     isPlaying = isPlayingNow
                 }
-                override fun onEvents(player: androidx.media3.common.Player, events: androidx.media3.common.Player.Events) {
-                    currentPosition = player.currentPosition
-                    duration = player.duration.takeIf { it > 0 } ?: 0L
-                }
             })
+        }
+    }
+
+    // Отдельный эффект для отслеживания позиции видео
+    LaunchedEffect(exoPlayer, isPlaying) {
+        val player = exoPlayer ?: return@LaunchedEffect
+        while (true) {
+            if (isPlaying) {
+                currentPosition = player.currentPosition
+            }
+            delay(16) // Примерно 60 fps для плавного обновления
         }
     }
 
@@ -125,13 +150,13 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
 
     LaunchedEffect(showRewind) {
         if (showRewind) {
-            kotlinx.coroutines.delay(700)
+            delay(700)
             showRewind = false
         }
     }
     LaunchedEffect(showForward) {
         if (showForward) {
-            kotlinx.coroutines.delay(700)
+            delay(700)
             showForward = false
         }
     }
