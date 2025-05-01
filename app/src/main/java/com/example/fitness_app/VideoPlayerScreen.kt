@@ -24,12 +24,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.navigation.NavController
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.media3.common.Player
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -38,6 +44,7 @@ import kotlin.math.roundToInt
 @Composable
 fun VideoPlayerScreen(videoId: String, navController: NavController) {
     var video by remember { mutableStateOf<Video?>(null) }
+    var author by remember { mutableStateOf<User?>(null) }
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(true) }
     var currentPosition by remember { mutableStateOf(0L) }
@@ -48,23 +55,44 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // Загружаем данные видео без обновления просмотров
+    // Загружаем данные видео и автора
     LaunchedEffect(videoId) {
         db.collection("videos")
             .document(videoId)
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
+                    val userId = document.getString("userId") ?: ""
                     video = Video(
                         id = document.id,
                         title = document.getString("title") ?: "",
                         description = document.getString("description") ?: "",
-                        userId = document.getString("userId") ?: "",
+                        userId = userId,
                         videoUrl = document.getString("videoUrl") ?: "",
                         tags = (document.get("tags") as? List<String>) ?: emptyList(),
                         views = document.getLong("views") ?: 0,
                         uploadDate = document.getLong("uploadDate") ?: 0
                     )
+
+                    // Загружаем данные автора
+                    db.collection("users")
+                        .document(userId)
+                        .get()
+                        .addOnSuccessListener { userDoc ->
+                            if (userDoc.exists()) {
+                                author = User(
+                                    userId = userDoc.id,
+                                    email = userDoc.getString("email") ?: "",
+                                    nickname = userDoc.getString("nickname") ?: "",
+                                    photoUrl = userDoc.getString("photoUrl"),
+                                    height = userDoc.getDouble("height"),
+                                    weight = userDoc.getDouble("weight"),
+                                    goalWeight = userDoc.getDouble("goal_weight"),
+                                    dailyStepGoal = userDoc.getLong("daily_step_goal")?.toInt(),
+                                    createdAt = userDoc.getTimestamp("created_at") ?: com.google.firebase.Timestamp.now()
+                                )
+                            }
+                        }
                 }
             }
     }
@@ -327,6 +355,43 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Информация об авторе
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { 
+                            author?.userId?.let { userId ->
+                                navController.navigate("profile/$userId")
+                            }
+                        }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val avatarUrl = author?.photoUrl?.let { url ->
+                        if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
+                    } ?: ""
+
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            ImageRequest.Builder(LocalContext.current)
+                                .data(avatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar)
+                                .error(R.drawable.ic_default_avatar)
+                                .build()
+                        ),
+                        contentDescription = "Аватар автора",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Text(
+                        text = author?.nickname ?: "Загрузка...",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
                 Text(
                     text = video?.title ?: "",
                     style = MaterialTheme.typography.titleLarge
@@ -354,7 +419,9 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                 ) {
                     video?.tags?.forEach { tag ->
                         SuggestionChip(
-                            onClick = { },
+                            onClick = { 
+                                navController.navigate("videos/tag/$tag")
+                            },
                             label = { Text(tag) }
                         )
                     }

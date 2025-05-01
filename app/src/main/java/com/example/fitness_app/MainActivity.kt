@@ -152,6 +152,10 @@ fun FitnessApp() {
                     val authorId = backStackEntry.arguments?.getString("authorId") ?: return@composable
                     AuthorVideosScreen(authorId = authorId, navController = navController)
                 }
+                composable("videos/tag/{tag}") { backStackEntry ->
+                    val tag = backStackEntry.arguments?.getString("tag") ?: return@composable
+                    TagVideosScreen(tag = tag, navController = navController)
+                }
             }
         }
     }
