@@ -1,11 +1,13 @@
 package com.example.fitness_app
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -14,6 +16,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.work.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -114,16 +117,37 @@ class StepService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Сначала запускаем сервис в фоновом режиме
+        startForegroundService()
+        
+        // Затем проверяем разрешения
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e("StepService", "Отсутствует разрешение ACTIVITY_RECOGNITION")
+            stopSelf()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_HEALTH) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e("StepService", "Отсутствует разрешение FOREGROUND_SERVICE_HEALTH")
+            stopSelf()
+            return
+        }
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
         if (stepSensor == null) {
             Log.e("StepService", "Датчик шагов не найден!")
-        } else {
-            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI)
+            stopSelf()
+            return
         }
 
-        startForegroundService()
+        sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI)
         scheduleDailyReset(this)
     }
 

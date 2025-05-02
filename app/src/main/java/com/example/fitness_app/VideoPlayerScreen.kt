@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +41,7 @@ import coil.request.ImageRequest
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import android.content.pm.ActivityInfo
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -52,8 +55,11 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     var showRewind by remember { mutableStateOf(false) }
     var showForward by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
+    var isFullscreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val activity = context as? androidx.appcompat.app.AppCompatActivity
     val db = FirebaseFirestore.getInstance()
+    val autoHideControlsDelay = 3000L // 3 секунды
 
     // Загружаем данные видео и автора
     LaunchedEffect(videoId) {
@@ -189,6 +195,23 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
         }
     }
 
+    fun toggleFullscreen() {
+        isFullscreen = !isFullscreen
+        activity?.requestedOrientation = if (isFullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    // Автоматическое скрытие контролов в полноэкранном режиме
+    LaunchedEffect(showControls, isFullscreen, isPlaying) {
+        if (showControls && isFullscreen && isPlaying) {
+            delay(autoHideControlsDelay)
+            showControls = false
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer?.release()
@@ -204,28 +227,35 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(video?.title ?: "Воспроизведение видео") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+            if (!isFullscreen) {
+                TopAppBar(
+                    title = { Text(video?.title ?: "Воспроизведение видео") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .then(if (isFullscreen) Modifier else Modifier.verticalScroll(rememberScrollState()))
+                .padding(if (isFullscreen) PaddingValues(0.dp) else padding)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .background(Color.Black)
-                    .clickable { showControls = !showControls }
+                modifier = if (isFullscreen)
+                    Modifier
+                        .fillMaxSize()
+                        .clickable { showControls = !showControls }
+                else
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .background(Color.Black)
+                        .clickable { showControls = !showControls }
             ) {
                 exoPlayer?.let { player ->
                     AndroidView(
@@ -253,7 +283,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.FastRewind, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                                Icon(imageVector = Icons.Default.FastRewind, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
                                 Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                             }
                         }
@@ -267,7 +297,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.FastForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                                Icon(imageVector = Icons.Default.FastForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
                                 Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                             }
                         }
@@ -330,17 +360,24 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 IconButton(onClick = { seekBy(-10_000) }) {
-                                    Icon(Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White)
+                                    Icon(imageVector = Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White)
                                 }
                                 IconButton(onClick = { togglePlayPause() }) {
                                     Icon(
-                                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
                                         tint = Color.White
                                     )
                                 }
                                 IconButton(onClick = { seekBy(10_000) }) {
-                                    Icon(Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White)
+                                    Icon(imageVector = Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White)
+                                }
+                                IconButton(onClick = { toggleFullscreen() }) {
+                                    Icon(
+                                        imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                        contentDescription = if (isFullscreen) "Выйти из полноэкранного режима" else "Полноэкранный режим",
+                                        tint = Color.White
+                                    )
                                 }
                             }
                         }
@@ -348,82 +385,84 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                 }
             }
 
-            // Информация о видео
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Информация об авторе
-                Row(
+            if (!isFullscreen) {
+                // Информация о видео
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { 
-                            author?.userId?.let { userId ->
-                                navController.navigate("profile/$userId")
-                            }
-                        }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val avatarUrl = author?.photoUrl?.let { url ->
-                        if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
-                    } ?: ""
-
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            ImageRequest.Builder(LocalContext.current)
-                                .data(avatarUrl)
-                                .placeholder(R.drawable.ic_default_avatar)
-                                .error(R.drawable.ic_default_avatar)
-                                .build()
-                        ),
-                        contentDescription = "Аватар автора",
+                    // Информация об авторе
+                    Row(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text(
-                        text = author?.nickname ?: "Загрузка...",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+                            .fillMaxWidth()
+                            .clickable { 
+                                author?.userId?.let { userId ->
+                                    navController.navigate("profile/$userId")
+                                }
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val avatarUrl = author?.photoUrl?.let { url ->
+                            if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
+                        } ?: ""
 
-                Text(
-                    text = video?.title ?: "",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
-                Text(
-                    text = video?.description ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Просмотров: ${video?.views ?: 0}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    video?.tags?.forEach { tag ->
-                        SuggestionChip(
-                            onClick = { 
-                                navController.navigate("videos/tag/$tag")
-                            },
-                            label = { Text(tag) }
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                ImageRequest.Builder(LocalContext.current)
+                                    .data(avatarUrl)
+                                    .placeholder(R.drawable.ic_default_avatar)
+                                    .error(R.drawable.ic_default_avatar)
+                                    .build()
+                            ),
+                            contentDescription = "Аватар автора",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                        Text(
+                            text = author?.nickname ?: "Загрузка...",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+
+                    Text(
+                        text = video?.title ?: "",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    Text(
+                        text = video?.description ?: "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Просмотров: ${video?.views ?: 0}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        video?.tags?.forEach { tag ->
+                            SuggestionChip(
+                                onClick = { 
+                                    navController.navigate("videos/tag/$tag")
+                                },
+                                label = { Text(tag) }
+                            )
+                        }
                     }
                 }
             }

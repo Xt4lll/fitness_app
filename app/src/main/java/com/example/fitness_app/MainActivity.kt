@@ -47,59 +47,64 @@ fun FitnessApp() {
             userId = newUserId
         }
     } else {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        val isVideoPlayerScreen = currentRoute?.startsWith("video_player") == true
         Scaffold(
             bottomBar = {
-                NavigationBar {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
+                if (!isVideoPlayerScreen) {
+                    NavigationBar {
+                        val navBackStackEntry by navController.currentBackStackEntryAsState()
+                        val currentRoute = navBackStackEntry?.destination?.route
 
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = "Профиль") },
-                        label = { Text("Профиль") },
-                        selected = currentRoute == "profile",
-                        onClick = {
-                            navController.navigate("profile") {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Person, contentDescription = "Профиль") },
+                            label = { Text("Профиль") },
+                            selected = currentRoute == "profile",
+                            onClick = {
+                                navController.navigate("profile") {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
                             }
-                        }
-                    )
+                        )
 
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Цели") },
-                        label = { Text("Цели") },
-                        selected = currentRoute == "goals",
-                        onClick = {
-                            navController.navigate("goals") {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Цели") },
+                            label = { Text("Цели") },
+                            selected = currentRoute == "goals",
+                            onClick = {
+                                navController.navigate("goals") {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
                             }
-                        }
-                    )
+                        )
 
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.DirectionsWalk, contentDescription = "Шагомер") },
-                        label = { Text("Шагомер") },
-                        selected = currentRoute == "step_counter",
-                        onClick = {
-                            navController.navigate("step_counter") {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.DirectionsWalk, contentDescription = "Шагомер") },
+                            label = { Text("Шагомер") },
+                            selected = currentRoute == "step_counter",
+                            onClick = {
+                                navController.navigate("step_counter") {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
                             }
-                        }
-                    )
+                        )
 
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.People, contentDescription = "Авторы") },
-                        label = { Text("Авторы") },
-                        selected = currentRoute == "authors",
-                        onClick = {
-                            navController.navigate("authors") {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.People, contentDescription = "Авторы") },
+                            label = { Text("Авторы") },
+                            selected = currentRoute == "authors",
+                            onClick = {
+                                navController.navigate("authors") {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         ) { innerPadding ->

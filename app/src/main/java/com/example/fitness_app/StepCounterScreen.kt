@@ -44,6 +44,19 @@ fun StepCounterScreen() {
     var dailyGoal by remember { mutableStateOf(10000) }
     var steps by remember { mutableStateOf(0) }
     var stepsHistory by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var hasRequiredPermissions by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val activityRecognitionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+        } else true
+
+        val foregroundServiceHealthGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_HEALTH) == PackageManager.PERMISSION_GRANTED
+        } else true
+
+        hasRequiredPermissions = activityRecognitionGranted && foregroundServiceHealthGranted
+    }
 
     LaunchedEffect(userId) {
         val snapshot = firestore.collection("users").document(userId).get().await()
@@ -55,7 +68,9 @@ fun StepCounterScreen() {
     }
 
     LaunchedEffect(Unit) {
-        ContextCompat.startForegroundService(context, Intent(context, StepService::class.java))
+        if (hasRequiredPermissions) {
+            ContextCompat.startForegroundService(context, Intent(context, StepService::class.java))
+        }
     }
 
     val stepFlow = remember { StepService.stepFlow }
@@ -80,7 +95,9 @@ fun StepCounterScreen() {
         animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing)
     )
 
-    RequestPermissionIfNeeded()
+    if (!hasRequiredPermissions) {
+        RequestPermissionIfNeeded()
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Шагомер") }) }
@@ -93,57 +110,65 @@ fun StepCounterScreen() {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = 1f,
-                    color = Color.Gray.copy(alpha = 0.3f),
-                    strokeWidth = 12.dp,
-                    modifier = Modifier.size(220.dp)
-                )
-                CircularProgressIndicator(
-                    progress = animatedProgress,
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 12.dp,
-                    modifier = Modifier.size(220.dp)
-                )
+            if (!hasRequiredPermissions) {
                 Text(
-                    text = "$animatedSteps",
-                    fontSize = 32.sp,
-                    color = Color.Black
+                    text = "Для работы шагомера необходимы разрешения",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
                 )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.LocalFireDepartment, "Calories", tint = Color.Red)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Калории: $animatedCalories", fontSize = 18.sp)
+            } else {
+                Box(contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = 1f,
+                        color = Color.Gray.copy(alpha = 0.3f),
+                        strokeWidth = 12.dp,
+                        modifier = Modifier.size(220.dp)
+                    )
+                    CircularProgressIndicator(
+                        progress = animatedProgress,
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 12.dp,
+                        modifier = Modifier.size(220.dp)
+                    )
+                    Text(
+                        text = "$animatedSteps",
+                        fontSize = 32.sp,
+                        color = Color.Black
+                    )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.DirectionsWalk, "Steps", tint = Color.Blue)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Шаги: $animatedSteps/$dailyGoal", fontSize = 18.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.LocalFireDepartment, "Calories", tint = Color.Red)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Калории: $animatedCalories", fontSize = 18.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.DirectionsWalk, "Steps", tint = Color.Blue)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Шаги: $animatedSteps/$dailyGoal", fontSize = 18.sp)
+                    }
                 }
-            }
 
-            StepHistoryChart(stepsHistory = stepsHistory)
+                StepHistoryChart(stepsHistory = stepsHistory)
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                    .padding(16.dp)
-            ) {
-                Text("Польза ходьбы и бега", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Ходьба и бег – это не только удобные способы передвижения, но и важные составляющие здорового образа жизни. Регулярные прогулки и пробежки помогают укрепить сердечно-сосудистую систему, улучшить общее самочувствие и снизить уровень стресса. Кроме того, физическая активность способствует улучшению обмена веществ и помогает контролировать вес.")
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Сжигание калорий – важный аспект поддержания здорового образа жизни. Количество сожженных калорий зависит от количества шагов, веса человека и интенсивности движения. В нашем приложении калории рассчитываются по следующей формуле:")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Калории = (шаги * 0.04) * вес (кг)")
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Поддержание здорового уровня физической активности помогает не только снизить риск развития заболеваний, но и улучшить настроение и повысить общий уровень энергии. Начав с небольших ежедневных прогулок, можно постепенно увеличивать нагрузку, делая шаги к более активной и здоровой жизни.")
+                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
+                        .padding(16.dp)
+                ) {
+                    Text("Польза ходьбы и бега", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Ходьба и бег – это не только удобные способы передвижения, но и важные составляющие здорового образа жизни. Регулярные прогулки и пробежки помогают укрепить сердечно-сосудистую систему, улучшить общее самочувствие и снизить уровень стресса. Кроме того, физическая активность способствует улучшению обмена веществ и помогает контролировать вес.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Сжигание калорий – важный аспект поддержания здорового образа жизни. Количество сожженных калорий зависит от количества шагов, веса человека и интенсивности движения. В нашем приложении калории рассчитываются по следующей формуле:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Калории = (шаги * 0.04) * вес (кг)")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Поддержание здорового уровня физической активности помогает не только снизить риск развития заболеваний, но и улучшить настроение и повысить общий уровень энергии. Начав с небольших ежедневных прогулок, можно постепенно увеличивать нагрузку, делая шаги к более активной и здоровой жизни.")
+                }
             }
         }
     }
@@ -227,19 +252,36 @@ private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
 @Composable
 fun RequestPermissionIfNeeded() {
     val context = LocalContext.current
-    val permission = Manifest.permission.ACTIVITY_RECOGNITION
+    val activityRecognitionPermission = Manifest.permission.ACTIVITY_RECOGNITION
+    val foregroundServiceHealthPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        Manifest.permission.FOREGROUND_SERVICE_HEALTH
+    } else null
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        Log.d("Permissions", "Разрешение ACTIVITY_RECOGNITION: $isGranted")
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        permissions.entries.forEach { (permission, isGranted) ->
+            Log.d("Permissions", "Разрешение $permission: $isGranted")
+        }
     }
 
     LaunchedEffect(Unit) {
+        val permissionsToRequest = mutableListOf<String>()
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, activityRecognitionPermission) != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissionLauncher.launch(permission)
+            permissionsToRequest.add(activityRecognitionPermission)
+        }
+
+        if (foregroundServiceHealthPermission != null &&
+            ContextCompat.checkSelfPermission(context, foregroundServiceHealthPermission) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(foregroundServiceHealthPermission)
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
         }
     }
 }
