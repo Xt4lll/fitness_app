@@ -225,8 +225,7 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                 leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp, start = 16.dp, end = 16.dp)
-                    .height(56.dp),
+                    .padding(top = 24.dp, start = 16.dp, end = 16.dp),
                 shape = RoundedCornerShape(16.dp)
             )
 
@@ -289,7 +288,8 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                                     isSubscribed = subscriptions.value.contains(author.userId),
                                     onSubscribe = { subscribeToAuthor(userId, author) {} },
                                     onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
-                                    onClick = { navController.navigate("author_videos/${author.userId}") }
+                                    onClick = { navController.navigate("author_videos/${author.userId}") },
+                                    showEmail = false
                                 )
                             }
                         }
@@ -371,7 +371,8 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                                     isSubscribed = subscriptions.value.contains(author.userId),
                                     onSubscribe = { subscribeToAuthor(userId, author) {} },
                                     onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
-                                    onClick = { navController.navigate("author_videos/${author.userId}") }
+                                    onClick = { navController.navigate("author_videos/${author.userId}") },
+                                    showEmail = false
                                 )
                             }
                         }
@@ -470,86 +471,6 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit, cardWidth: Dp = 300.dp) 
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun AuthorItem(
-    author: User,
-    isSubscribed: Boolean,
-    onSubscribe: () -> Unit,
-    onUnsubscribe: () -> Unit,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick)
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                val avatarUrl = author.photoUrl?.let { url ->
-                    if (url.contains("?")) "$url&tr=w-64,h-64" else "$url?tr=w-64,h-64"
-                } ?: ""
-
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        ImageRequest.Builder(LocalContext.current)
-                            .data(avatarUrl)
-                            .placeholder(R.drawable.ic_default_avatar)
-                            .error(R.drawable.ic_default_avatar)
-                            .build()
-                    ),
-                    contentDescription = "Аватар автора",
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(20.dp))
-                Column {
-                    Text(
-                        text = author.nickname,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = author.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            if (isSubscribed) {
-                OutlinedButton(
-                    onClick = onUnsubscribe,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(44.dp)
-                ) { Text("Отписаться", style = MaterialTheme.typography.titleMedium) }
-            } else {
-                Button(
-                    onClick = onSubscribe,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(44.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) { Text("Подписаться", style = MaterialTheme.typography.titleMedium) }
             }
         }
     }

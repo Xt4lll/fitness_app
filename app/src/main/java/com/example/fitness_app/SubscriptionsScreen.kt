@@ -19,10 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.fitness_app.AuthorItem
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun SubscriptionsScreen(userId: String, navController: NavController) {
@@ -100,7 +103,7 @@ fun SubscriptionsScreen(userId: String, navController: NavController) {
                 } ?: ""
                 AuthorItem(
                     author = author.copy(photoUrl = avatarUrl),
-                    isSubscribed = subscriptions.value.contains(author.userId), // Используем актуальное состояние
+                    isSubscribed = subscriptions.value.contains(author.userId),
                     onSubscribe = {
                         subscribeToAuthor(userId, author) {
                             // Автоматически обновится через snapshotListener
@@ -111,7 +114,11 @@ fun SubscriptionsScreen(userId: String, navController: NavController) {
                             // Автоматически обновится через snapshotListener
                         }
                     },
-                    onClick = { navController.navigate("author_videos/${author.userId}") }
+                    onClick = { navController.navigate("author_videos/${author.userId}") },
+                    avatarSize = 48.dp,
+                    buttonTextStyle = MaterialTheme.typography.labelLarge,
+                    buttonMaxLines = 1,
+                    buttonOverflow = TextOverflow.Ellipsis
                 )
             }
         }
