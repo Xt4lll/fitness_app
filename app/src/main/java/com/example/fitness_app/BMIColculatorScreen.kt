@@ -29,9 +29,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.times
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.times
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -81,7 +85,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier
         .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)
+        .background(colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -103,7 +107,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .shadow(8.dp, RoundedCornerShape(24.dp)),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = colorScheme.surface
                 ),
                 shape = RoundedCornerShape(24.dp)
             ) {
@@ -123,14 +127,14 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     Text(
                         text = if (bmi > 0f) "%.1f".format(animatedBmi) else "-",
                         style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
-                        color = currentCategory?.color ?: MaterialTheme.colorScheme.primary,
+                        color = currentCategory?.color ?: colorScheme.primary,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = currentCategory?.label ?: "Введите данные",
                         style = MaterialTheme.typography.titleMedium,
-                        color = currentCategory?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = currentCategory?.color ?: colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
@@ -146,7 +150,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .shadow(4.dp, RoundedCornerShape(20.dp)),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = colorScheme.surface
                 ),
                 shape = RoundedCornerShape(20.dp)
             ) {
@@ -158,7 +162,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = height,
                             onValueChange = { height = it },
-                            label = { Text("Рост (см)", color = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Рост (см)", color = colorScheme.onSurface) },
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             isError = height.isNotEmpty() && !heightValid.value,
@@ -167,7 +171,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = weight,
                             onValueChange = { weight = it },
-                            label = { Text("Вес (кг)", color = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Вес (кг)", color = colorScheme.onSurface) },
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             isError = weight.isNotEmpty() && !weightValid.value,
@@ -183,7 +187,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = age,
                             onValueChange = { age = it },
-                            label = { Text("Возраст", color = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Возраст", color = colorScheme.onSurface) },
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             isError = age.isNotEmpty() && !ageValid.value,
@@ -220,7 +224,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .shadow(2.dp, RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = colorScheme.surface
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -228,7 +232,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     Text(
                         "Категории ИМТ:",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     bmiCategories.forEach {
@@ -242,7 +246,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                                     .background(it.color, shape = RoundedCornerShape(4.dp))
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("${it.rangeStart} - ${it.rangeEnd}: ", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("${it.rangeStart} - ${it.rangeEnd}: ", fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)
                             Text(it.label, color = it.color)
                         }
                     }
@@ -255,7 +259,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = colorScheme.surface
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -263,24 +267,24 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                     Text(
                         text = "Что такое Индекс Массы Тела (ИМТ)?",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Text(
                         text = "ИМТ - показатель соотношения роста и веса человека.",
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Text(
                         text = "ИМТ = вес (кг) / (рост (м)²)",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = colorScheme.primary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Text(
                         text = "Примечание: ИМТ не учитывает мышечную массу и может быть неточным для спортсменов и пожилых людей.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
@@ -289,7 +293,7 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onBack,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                colors = ButtonDefaults.buttonColors(containerColor = colorScheme.secondary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp),
@@ -308,6 +312,10 @@ fun BMIModernChart(bmiValue: Float, categories: List<BMISection>) {
         targetValue = bmiValue,
         animationSpec = tween(durationMillis = 1000)
     )
+    // Сохраняем позицию стрелки в пикселях
+    var arrowX by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+
     Box(
         modifier = Modifier
             .height(80.dp)
@@ -338,24 +346,20 @@ fun BMIModernChart(bmiValue: Float, categories: List<BMISection>) {
                 )
                 startX += sectionWidth
             }
-            // Стрелка
-            val bmiX = (animatedBmi.coerceIn(0f, 60f) / 60f) * totalWidth
-            drawLine(
-                color = Color.Black,
-                start = Offset(bmiX, yCenter + 20f),
-                end = Offset(bmiX, yCenter + 36f),
-                strokeWidth = 6f
-            )
-            drawPath(
-                path = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(bmiX, yCenter + 20f)
-                    lineTo(bmiX - 10, yCenter + 36f)
-                    lineTo(bmiX + 10, yCenter + 36f)
-                    close()
-                },
-                color = Color.Black
-            )
+            // Сохраняем позицию стрелки
+            arrowX = (animatedBmi.coerceIn(0f, 60f) / 60f) * totalWidth
         }
+        // Переводим пиксели в dp для Modifier.offset
+        val arrowXdp = with(density) { arrowX.toDp() }
+        Icon(
+            imageVector = Icons.Default.ArrowDropDown,
+            contentDescription = "Текущий ИМТ",
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .offset(x = arrowXdp - 12.dp, y = 40.dp)
+                .size(24.dp)
+                .rotate(180f)
+        )
     }
 }
 
@@ -407,34 +411,3 @@ fun GenderDropdown(
         }
     }
 }
-
-@Composable
-fun BMIGauge(bmi: Float) {
-    Box(modifier = Modifier.size(200.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            // Цветовые зоны
-            drawArc(color = Color.Blue, startAngle = 180f, sweepAngle = 30f, useCenter = false, style = Stroke(40f))
-            drawArc(color = Color.Green, startAngle = 210f, sweepAngle = 30f, useCenter = false, style = Stroke(40f))
-            drawArc(color = Color.Yellow, startAngle = 240f, sweepAngle = 30f, useCenter = false, style = Stroke(40f))
-            drawArc(color = Color.Red, startAngle = 270f, sweepAngle = 30f, useCenter = false, style = Stroke(40f))
-
-            // Стрелка
-            val angle = 180f + ((bmi.coerceIn(16f, 40f) - 16f) / (40f - 16f)) * 120f
-            val radians = Math.toRadians(angle.toDouble())
-            val centerX = size.width / 2
-            val centerY = size.height
-            val needleLength = size.minDimension / 2.2f
-
-            drawLine(
-                color = Color.Black,
-                start = Offset(centerX, centerY),
-                end = Offset(
-                    centerX + needleLength * kotlin.math.cos(radians).toFloat(),
-                    centerY + needleLength * kotlin.math.sin(radians).toFloat()
-                ),
-                strokeWidth = 8f
-            )
-        }
-    }
-}
-

@@ -55,7 +55,7 @@ fun FitnessApp() {
             bottomBar = {
                 if (!isVideoPlayerScreen) {
                     NavigationBar(
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 0.dp
                     ) {
                         val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -73,18 +73,14 @@ fun FitnessApp() {
                                     Icon(
                                         imageVector = item.icon,
                                         contentDescription = item.label,
-                                        tint = when {
-                                            selected -> Aqua
-                                            item.route == "profile" -> GreenishCyan
-                                            else -> GraanCyan
-                                        }
+                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 },
                                 label = {
                                     Text(
                                         text = item.label,
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Aqua
+                                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     )
                                 },
@@ -96,9 +92,9 @@ fun FitnessApp() {
                                     }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Aqua,
-                                    selectedTextColor = Aqua,
-                                    indicatorColor = Aqua.copy(alpha = 0.15f),
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 )
                             )
                         }

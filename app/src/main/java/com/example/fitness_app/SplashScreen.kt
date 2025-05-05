@@ -4,13 +4,13 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,7 +34,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -42,7 +42,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 text = "Rep",
                 fontSize = 48.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = GreenishCyan,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .scale(scale.value)
                     .alpha(alpha.value)
@@ -52,7 +52,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 text = "Riot",
                 fontSize = 48.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Aqua,
+                color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier
                     .scale(scale.value)
                     .alpha(alpha.value)

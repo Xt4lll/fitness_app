@@ -49,7 +49,7 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -57,7 +57,7 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
                 .scale(cardScale.value)
                 .alpha(cardAlpha.value)
                 .shadow(32.dp, RoundedCornerShape(32.dp))
-                .background(Color.White, RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(32.dp))
                 .padding(32.dp)
                 .widthIn(max = 310.dp)
         ) {

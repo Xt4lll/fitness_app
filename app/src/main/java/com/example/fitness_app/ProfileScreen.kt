@@ -129,7 +129,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -142,7 +142,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 modifier = Modifier
                     .size(110.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .clickable { imagePicker.launch("image/*") },
                 contentAlignment = Alignment.BottomEnd
             ) {
@@ -151,7 +151,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                         modifier = Modifier
                             .size(80.dp)
                             .align(Alignment.Center),
-                        color = GreenishCyan
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Image(
@@ -169,12 +169,12 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Сменить фото",
-                        tint = Aqua,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .offset(6.dp, 6.dp)
                             .size(28.dp)
-                            .background(Color.White, CircleShape)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape)
                             .padding(4.dp)
                     )
                 }
@@ -202,10 +202,10 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenishCyan,
-                    unfocusedBorderColor = GreenishCyan,
-                    focusedLabelColor = GreenishCyan,
-                    cursorColor = GreenishCyan
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -217,10 +217,10 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenishCyan,
-                    unfocusedBorderColor = GreenishCyan,
-                    focusedLabelColor = GreenishCyan,
-                    cursorColor = GreenishCyan
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -232,10 +232,10 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenishCyan,
-                    unfocusedBorderColor = GreenishCyan,
-                    focusedLabelColor = GreenishCyan,
-                    cursorColor = GreenishCyan
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -247,10 +247,10 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenishCyan,
-                    unfocusedBorderColor = GreenishCyan,
-                    focusedLabelColor = GreenishCyan,
-                    cursorColor = GreenishCyan
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
             Spacer(modifier = Modifier.height(20.dp))
@@ -276,8 +276,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenishCyan,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,
@@ -294,8 +294,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenishCyan,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,
@@ -312,8 +312,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenishCyan,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,
@@ -330,8 +330,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenishCyan,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,
@@ -359,8 +359,8 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Red,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
                 ),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,
@@ -370,7 +370,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 Icon(
                     imageVector = Icons.Default.ExitToApp,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onError,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))

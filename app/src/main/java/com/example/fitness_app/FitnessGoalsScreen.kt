@@ -103,7 +103,7 @@ fun FitnessGoalsScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         LazyColumn(
             modifier = Modifier
@@ -118,7 +118,7 @@ fun FitnessGoalsScreen() {
                     style = TextStyle(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = GreenishCyan
+                        color = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -127,7 +127,7 @@ fun FitnessGoalsScreen() {
                 item {
                     Text(
                         text = "Активные цели",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
@@ -165,8 +165,8 @@ fun FitnessGoalsScreen() {
         }
         FloatingActionButton(
             onClick = { showAddDialog = true },
-            containerColor = GreenishCyan,
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(24.dp)
@@ -261,7 +261,7 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         SwipeToDismissBox(
             state = dismissState,
@@ -271,7 +271,7 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Red)
+                        .background(MaterialTheme.colorScheme.error)
                         .clip(RoundedCornerShape(18.dp))
                         .padding(horizontal = 20.dp),
                     contentAlignment = Alignment.CenterEnd
@@ -279,7 +279,7 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Удалить",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onError,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -288,14 +288,14 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, GreenishCyan, RoundedCornerShape(18.dp))
-                        .background(Color.White)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(18.dp)
                 ) {
                     Column {
                         Text(
                             goal.title,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface),
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -305,19 +305,19 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                                 .fillMaxWidth()
                                 .height(10.dp)
                                 .clip(RoundedCornerShape(6.dp)),
-                            color = GreenishCyan,
-                            trackColor = Color(0xFFE0E0E0)
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "Прогресс: $currentProgress/${goal.target}",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
                                 "${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.plannedDate.seconds * 1000))}",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -351,8 +351,8 @@ fun RepsControl(current: Long, onUpdate: (Long) -> Unit, max: Long) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(GreenishCyan)
-        ) { Icon(Icons.Default.Remove, contentDescription = "-", tint = Color.White) }
+                .background(MaterialTheme.colorScheme.primary)
+        ) { Icon(Icons.Default.Remove, contentDescription = "-", tint = MaterialTheme.colorScheme.onPrimary) }
 
         Text("$current", modifier = Modifier.padding(horizontal = 12.dp), fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
@@ -362,8 +362,8 @@ fun RepsControl(current: Long, onUpdate: (Long) -> Unit, max: Long) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(GreenishCyan)
-        ) { Icon(Icons.Default.Add, contentDescription = "+", tint = Color.White) }
+                .background(MaterialTheme.colorScheme.primary)
+        ) { Icon(Icons.Default.Add, contentDescription = "+", tint = MaterialTheme.colorScheme.onPrimary) }
     }
 }
 
@@ -388,12 +388,12 @@ fun TimeControl(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(if (isRunning) Red else GreenishCyan)
+                .background(if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
         ) {
             Icon(
                 imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (isRunning) "Пауза" else "Старт",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -409,9 +409,9 @@ fun TimeControl(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF3F3F3))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Icon(Icons.Default.Refresh, contentDescription = "Сбросить", tint = GreenishCyan, modifier = Modifier.size(28.dp))
+            Icon(Icons.Default.Refresh, contentDescription = "Сбросить", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -443,7 +443,7 @@ fun FinishedGoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         SwipeToDismissBox(
             state = dismissState,
@@ -453,7 +453,7 @@ fun FinishedGoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Red)
+                        .background(MaterialTheme.colorScheme.error)
                         .clip(RoundedCornerShape(18.dp))
                         .padding(horizontal = 20.dp),
                     contentAlignment = Alignment.CenterEnd
@@ -461,7 +461,7 @@ fun FinishedGoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Удалить",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onError,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -470,28 +470,28 @@ fun FinishedGoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFF3F3F3))
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(18.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GreenishCyan, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 goal.title,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     textDecoration = TextDecoration.LineThrough
                                 )
                             )
                             Text(
                                 "Выполнено: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.createdDate.seconds * 1000))}",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             Text(
                                 "Цель: ${goal.target} ${if (goal.type == FitnessGoal.GoalType.REPS) "повторений" else "секунд"}",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                         }
                     }
@@ -543,7 +543,7 @@ fun AddGoalDialog(
                 .clip(RoundedCornerShape(28.dp))
                 .shadow(24.dp, RoundedCornerShape(28.dp))
                 .widthIn(440.dp),
-            color = Color.White
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier.padding(28.dp),
@@ -553,7 +553,7 @@ fun AddGoalDialog(
                     "Новая цель",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = GreenishCyan,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 24.sp
                     ),
                     modifier = Modifier.padding(bottom = 18.dp)
@@ -565,10 +565,10 @@ fun AddGoalDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GreenishCyan,
-                        unfocusedBorderColor = GreenishCyan,
-                        focusedLabelColor = GreenishCyan,
-                        cursorColor = GreenishCyan
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary
                     )
                 )
                 Spacer(modifier = Modifier.height(14.dp))
@@ -587,13 +587,13 @@ fun AddGoalDialog(
                                 selected = goalType == type,
                                 onClick = { goalType = type },
                                 colors = RadioButtonDefaults.colors(
-                                    selectedColor = GreenishCyan,
-                                    unselectedColor = Color.Gray
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
                             Text(
                                 text = type.displayName,
-                                color = if (goalType == type) GreenishCyan else Color.Black,
+                                color = if (goalType == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (goalType == type) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -612,7 +612,7 @@ fun AddGoalDialog(
                                 onClick = { minutesExpanded = true },
                                 shape = RoundedCornerShape(14.dp),
                                 border = ButtonDefaults.outlinedButtonBorder,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenishCyan),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                                 modifier = Modifier.width(100.dp)
                             ) {
                                 Text("${minutes} мин")
@@ -639,7 +639,7 @@ fun AddGoalDialog(
                                 onClick = { secondsExpanded = true },
                                 shape = RoundedCornerShape(14.dp),
                                 border = ButtonDefaults.outlinedButtonBorder,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenishCyan),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                                 modifier = Modifier.width(100.dp)
                             ) {
                                 Text("${seconds} сек")
@@ -670,10 +670,10 @@ fun AddGoalDialog(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GreenishCyan,
-                            unfocusedBorderColor = GreenishCyan,
-                            focusedLabelColor = GreenishCyan,
-                            cursorColor = GreenishCyan
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
@@ -682,15 +682,15 @@ fun AddGoalDialog(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GreenishCyan,
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(plannedDate)}")
                 }
                 if (!isDateValid) {
-                    Text("Дата не может быть в прошлом", color = Red, style = MaterialTheme.typography.bodySmall)
+                    Text("Дата не может быть в прошлом", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(modifier = Modifier.height(18.dp))
                 Row(
@@ -727,8 +727,8 @@ fun AddGoalDialog(
                         enabled = (goalType == FitnessGoal.GoalType.REPS && repsTarget.isNotBlank() || goalType == FitnessGoal.GoalType.TIME && (minutes > 0 || seconds > 0)) && title.isNotBlank() && isDateValid,
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = GreenishCyan,
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) { Text("Сохранить", fontWeight = FontWeight.Bold) }
                 }
