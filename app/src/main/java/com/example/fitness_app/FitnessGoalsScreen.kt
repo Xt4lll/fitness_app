@@ -1,6 +1,5 @@
 package com.example.fitness_app
 
-import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,10 +25,28 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.sp
+import com.example.fitness_app.ui.theme.GreenishCyan
+import com.example.fitness_app.ui.theme.Red
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 
-
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun FitnessGoalsScreen() {
     val firestore = FirebaseFirestore.getInstance()
@@ -39,13 +56,23 @@ fun FitnessGoalsScreen() {
     val finishedGoals = remember { mutableStateListOf<FitnessGoal>() }
     var showAddDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(userId) {
         firestore.collection("fitness_goals")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("FIREBASE", "Error listening to fitness_goals: ${error.message}")
+                    return@addSnapshotListener
+                }
                 snapshot?.documents?.mapNotNull {
-                    it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                    try {
+                        it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                    } catch (e: Exception) {
+                        Log.e("FIREBASE", "Error parsing goal: ${e.message}")
+                        null
+                    }
                 }?.let {
                     activeGoals.clear()
                     activeGoals.addAll(it)
@@ -55,8 +82,17 @@ fun FitnessGoalsScreen() {
         firestore.collection("finished_goals")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("FIREBASE", "Error listening to finished_goals: ${error.message}")
+                    return@addSnapshotListener
+                }
                 snapshot?.documents?.mapNotNull {
-                    it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                    try {
+                        it.toObject(FitnessGoal::class.java)?.copy(id = it.id)
+                    } catch (e: Exception) {
+                        Log.e("FIREBASE", "Error parsing finished goal: ${e.message}")
+                        null
+                    }
                 }?.let {
                     finishedGoals.clear()
                     finishedGoals.addAll(it)
@@ -64,26 +100,79 @@ fun FitnessGoalsScreen() {
             }
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Фитнес-цели") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, "Добавить цель")
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Твои цели",
+                    style = TextStyle(
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GreenishCyan
+                    ),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
             }
+            if (activeGoals.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Активные цели",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                items(activeGoals, key = { it.id }) { goal ->
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically()
+                    ) {
+                        GoalItem(goal, firestore)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            if (finishedGoals.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Выполненные цели",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                }
+                items(finishedGoals, key = { it.id }) { goal ->
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically()
+                    ) {
+                        FinishedGoalItem(goal, firestore)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
-    ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            item { Text("Активные цели", style = MaterialTheme.typography.headlineSmall) }
-            items(activeGoals) { goal ->
-                GoalItem(goal, firestore)
-                Divider()
-            }
-
-            item { Text("Выполненные цели", style = MaterialTheme.typography.headlineSmall) }
-            items(finishedGoals) { goal ->
-                FinishedGoalItem(goal)
-                Divider()
-            }
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            containerColor = GreenishCyan,
+            contentColor = Color.White,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(64.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Добавить цель", modifier = Modifier.size(32.dp))
         }
     }
 
@@ -100,6 +189,7 @@ fun FitnessGoalsScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
     var isTimerRunning by remember { mutableStateOf(false) }
@@ -109,30 +199,31 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
         targetValue = currentProgress.toFloat() / goal.target.toFloat(),
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
     )
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     fun updateProgress(newValue: Long) {
         if (newValue > goal.target) return
 
+        val updates = mapOf(
+            "currentProgress" to newValue,
+            "isCompleted" to (newValue >= goal.target)
+        )
+
         firestore.collection("fitness_goals").document(goal.id)
-            .update(mapOf(
-                "currentProgress" to newValue,
-                "isCompleted" to (newValue >= goal.target)
-            ))
+            .update(updates)
             .addOnSuccessListener {
                 currentProgress = newValue
                 if (newValue >= goal.target) {
                     moveGoalToFinished(goal.copy(currentProgress = newValue), firestore)
                 }
             }
+            .addOnFailureListener { e ->
+                Log.e("FIREBASE", "Error updating progress: ${e.message}")
+                Toast.makeText(context, "Ошибка обновления прогресса", Toast.LENGTH_SHORT).show()
+            }
     }
 
-    LaunchedEffect(isCompleted) {
-        if (isCompleted && !goal.isCompleted) {
-            moveGoalToFinished(goal.copy(currentProgress = currentProgress), firestore)
-        }
-    }
-
-    // Таймер для TIME
     LaunchedEffect(isTimerRunning) {
         if (isTimerRunning) {
             while (isTimerRunning) {
@@ -147,66 +238,107 @@ fun GoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
         }
     }
 
-    // Обработчик достижения цели
-    LaunchedEffect(currentProgress) {
-        if (currentProgress >= goal.target && !goal.isCompleted) {
-            moveGoalToFinished(goal.copy(currentProgress = currentProgress), firestore)
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                firestore.collection("fitness_goals").document(goal.id)
+                    .delete()
+                    .addOnSuccessListener {
+                        Log.d("FIREBASE", "Goal deleted successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("FIREBASE", "Error deleting goal: ${e.message}")
+                        Toast.makeText(context, "Ошибка удаления цели", Toast.LENGTH_SHORT).show()
+                    }
+                true
+            } else {
+                false
+            }
         }
-    }
+    )
 
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = isCompleted,
-                    onCheckedChange = null,
-                    enabled = false,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(goal.title, modifier = Modifier.weight(1f))
-                IconButton(
-                    onClick = { firestore.collection("fitness_goals").document(goal.id).delete() }
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true,
+            backgroundContent = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Red)
+                        .clip(RoundedCornerShape(18.dp))
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
                 ) {
-                    Icon(Icons.Default.Delete, "Удалить")
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Удалить",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            content = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, GreenishCyan, RoundedCornerShape(18.dp))
+                        .background(Color.White)
+                        .padding(18.dp)
+                ) {
+                    Column {
+                        Text(
+                            goal.title,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = animatedProgress.coerceIn(0f, 1f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(6.dp)),
+                            color = GreenishCyan,
+                            trackColor = Color(0xFFE0E0E0)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Прогресс: $currentProgress/${goal.target}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                "${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.plannedDate.seconds * 1000))}",
+                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        when (goal.type) {
+                            FitnessGoal.GoalType.REPS -> RepsControl(
+                                current = currentProgress,
+                                onUpdate = { newValue -> updateProgress(newValue) },
+                                max = goal.target
+                            )
+                            FitnessGoal.GoalType.TIME -> TimeControl(
+                                isRunning = isTimerRunning,
+                                onToggle = { isTimerRunning = it },
+                                current = currentProgress,
+                                onUpdate = { newValue -> updateProgress(newValue) },
+                                max = goal.target
+                            )
+                        }
+                    }
                 }
             }
-
-            LinearProgressIndicator(
-                progress = animatedProgress.coerceIn(0f, 1f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-            )
-
-            Text("Прогресс: $currentProgress/${goal.target}")
-            Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.plannedDate.seconds * 1000))}")
-
-            when (goal.type) {
-                FitnessGoal.GoalType.REPS -> RepsControl(
-                    current = currentProgress,
-                    onUpdate = { newValue ->
-                        updateProgress(newValue) // Непосредственно вызываем обновление в Firebase
-                    },
-                    max = goal.target
-                )
-                FitnessGoal.GoalType.TIME -> TimeControl(
-                    isRunning = isTimerRunning,
-                    onToggle = { isTimerRunning = it },
-                    current = currentProgress,
-                    onUpdate = { newValue ->
-                        updateProgress(newValue) // Аналогично для TimeControl
-                    },
-                    max = goal.target
-                )
-            }
-        }
+        )
     }
 }
 
@@ -215,15 +347,23 @@ fun RepsControl(current: Long, onUpdate: (Long) -> Unit, max: Long) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(
             onClick = { onUpdate((current - 1).coerceAtLeast(0)) },
-            enabled = current > 0
-        ) { Icon(Icons.Default.Remove, "-") }
+            enabled = current > 0,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(GreenishCyan)
+        ) { Icon(Icons.Default.Remove, contentDescription = "-", tint = Color.White) }
 
-        Text("$current", modifier = Modifier.padding(horizontal = 8.dp))
+        Text("$current", modifier = Modifier.padding(horizontal = 12.dp), fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
         IconButton(
             onClick = { onUpdate((current + 1).coerceAtMost(max)) },
-            enabled = current < max
-        ) { Icon(Icons.Default.Add, "+") }
+            enabled = current < max,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(GreenishCyan)
+        ) { Icon(Icons.Default.Add, contentDescription = "+", tint = Color.White) }
     }
 }
 
@@ -235,46 +375,131 @@ fun TimeControl(
     onUpdate: (Long) -> Unit,
     max: Long
 ) {
-//    LaunchedEffect(isRunning) {
-//        while (isRunning && current < max) {
-//            delay(1000L)
-//            onUpdate(current + 1) // Теперь это будет вызывать updateProgress
-//        }
-//        if (current >= max) onToggle(false)
-//    }
-
-    Button(
-        onClick = { onToggle(!isRunning) },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isRunning) Color.Red else Color.Green
-        ),
-        enabled = current < max
-    ) {
-        Icon(
-            imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-            contentDescription = if (isRunning) "Пауза" else "Старт"
-        )
+    // Форматирование времени в mm:ss
+    fun formatTime(seconds: Long): String {
+        val m = seconds / 60
+        val s = seconds % 60
+        return "%02d:%02d".format(m, s)
     }
-}
-
-@Composable
-fun FinishedGoalItem(goal: FitnessGoal) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.LightGray.copy(alpha = 0.3f)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = { onToggle(!isRunning) },
+            enabled = current < max,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(if (isRunning) Red else GreenishCyan)
+        ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isRunning) "Пауза" else "Старт",
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            formatTime(current),
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
         )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(goal.title, style = MaterialTheme.typography.titleMedium)
-            Text("Выполнено: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.createdDate.seconds * 1000))}")
-            Text("Цель: ${goal.target} ${if (goal.type == FitnessGoal.GoalType.REPS) "повторений" else "секунд"}")
+        Spacer(modifier = Modifier.width(16.dp))
+        IconButton(
+            onClick = { onUpdate(0L) },
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFF3F3F3))
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = "Сбросить", tint = GreenishCyan, modifier = Modifier.size(28.dp))
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FinishedGoalItem(goal: FitnessGoal, firestore: FirebaseFirestore) {
+    val context = LocalContext.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                firestore.collection("finished_goals").document(goal.id)
+                    .delete()
+                    .addOnSuccessListener {
+                        Log.d("FIREBASE", "Finished goal deleted successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("FIREBASE", "Error deleting finished goal: ${e.message}")
+                        Toast.makeText(context, "Ошибка удаления цели", Toast.LENGTH_SHORT).show()
+                    }
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White)
+    ) {
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true,
+            backgroundContent = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Red)
+                        .clip(RoundedCornerShape(18.dp))
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Удалить",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            content = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF3F3F3))
+                        .padding(18.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GreenishCyan, modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                goal.title,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Gray,
+                                    textDecoration = TextDecoration.LineThrough
+                                )
+                            )
+                            Text(
+                                "Выполнено: ${SimpleDateFormat("dd.MM.yyyy").format(Date(goal.createdDate.seconds * 1000))}",
+                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                            )
+                            Text(
+                                "Цель: ${goal.target} ${if (goal.type == FitnessGoal.GoalType.REPS) "повторений" else "секунд"}",
+                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                            )
+                        }
+                    }
+                }
+            }
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -284,17 +509,21 @@ fun AddGoalDialog(
     onSave: (Map<String, Any>) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
-    var target by remember { mutableStateOf("") }
+    var repsTarget by remember { mutableStateOf("") }
     var goalType by remember { mutableStateOf(FitnessGoal.GoalType.REPS) }
     var plannedDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var isDateValid by remember { mutableStateOf(true) }
+    var minutes by remember { mutableStateOf(0) }
+    var seconds by remember { mutableStateOf(0) }
+    var minutesExpanded by remember { mutableStateOf(false) }
+    var secondsExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     if (showDatePicker) {
         DatePickerDialog(
             initialDate = plannedDate,
             onDateSelected = { date ->
-                // Проверка, что выбранная дата не прошедшая
                 if (date.before(Date())) {
                     isDateValid = false
                 } else {
@@ -309,19 +538,40 @@ fun AddGoalDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.padding(16.dp),
-            shape = MaterialTheme.shapes.medium
+            modifier = Modifier
+                .padding(16.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .shadow(24.dp, RoundedCornerShape(28.dp))
+                .widthIn(440.dp),
+            color = Color.White
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Новая цель", style = MaterialTheme.typography.headlineSmall)
-
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Новая цель",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GreenishCyan,
+                        fontSize = 24.sp
+                    ),
+                    modifier = Modifier.padding(bottom = 18.dp)
+                )
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Название цели*") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GreenishCyan,
+                        unfocusedBorderColor = GreenishCyan,
+                        focusedLabelColor = GreenishCyan,
+                        cursorColor = GreenishCyan
+                    )
                 )
-
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -335,48 +585,137 @@ fun AddGoalDialog(
                         ) {
                             RadioButton(
                                 selected = goalType == type,
-                                onClick = { goalType = type }
+                                onClick = { goalType = type },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = GreenishCyan,
+                                    unselectedColor = Color.Gray
+                                )
                             )
-                            Text(text = type.displayName)
+                            Text(
+                                text = type.displayName,
+                                color = if (goalType == type) GreenishCyan else Color.Black,
+                                fontWeight = if (goalType == type) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     }
                 }
-
-                OutlinedTextField(
-                    value = target,
-                    onValueChange = { target = it },
-                    label = { Text("Цель (${if (goalType == FitnessGoal.GoalType.REPS) "повторений" else "секунд"})*") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                if (goalType == FitnessGoal.GoalType.TIME) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Minutes picker
+                        Box {
+                            OutlinedButton(
+                                onClick = { minutesExpanded = true },
+                                shape = RoundedCornerShape(14.dp),
+                                border = ButtonDefaults.outlinedButtonBorder,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenishCyan),
+                                modifier = Modifier.width(100.dp)
+                            ) {
+                                Text("${minutes} мин")
+                            }
+                            DropdownMenu(
+                                expanded = minutesExpanded,
+                                onDismissRequest = { minutesExpanded = false }
+                            ) {
+                                (0..120).forEach { min ->
+                                    DropdownMenuItem(
+                                        text = { Text("$min мин") },
+                                        onClick = {
+                                            minutes = min
+                                            minutesExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        // Seconds picker
+                        Box {
+                            OutlinedButton(
+                                onClick = { secondsExpanded = true },
+                                shape = RoundedCornerShape(14.dp),
+                                border = ButtonDefaults.outlinedButtonBorder,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenishCyan),
+                                modifier = Modifier.width(100.dp)
+                            ) {
+                                Text("${seconds} сек")
+                            }
+                            DropdownMenu(
+                                expanded = secondsExpanded,
+                                onDismissRequest = { secondsExpanded = false }
+                            ) {
+                                (0..59).forEach { sec ->
+                                    DropdownMenuItem(
+                                        text = { Text("$sec сек") },
+                                        onClick = {
+                                            seconds = sec
+                                            secondsExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = repsTarget,
+                        onValueChange = { repsTarget = it },
+                        label = { Text("Цель (повторений)*") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GreenishCyan,
+                            unfocusedBorderColor = GreenishCyan,
+                            focusedLabelColor = GreenishCyan,
+                            cursorColor = GreenishCyan
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GreenishCyan,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Дата выполнения: ${SimpleDateFormat("dd.MM.yyyy").format(plannedDate)}")
                 }
-
-                // Если дата не валидна, показываем ошибку
                 if (!isDateValid) {
-                    Text("Дата не может быть в прошлом", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                    Text("Дата не может быть в прошлом", color = Red, style = MaterialTheme.typography.bodySmall)
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(18.dp))
                 Row(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(onClick = onDismiss) { Text("Отмена") }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        border = ButtonDefaults.outlinedButtonBorder,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors()
+                    ) { Text("Отмена") }
+                    Spacer(modifier = Modifier.width(12.dp))
                     Button(
                         onClick = {
+                            val targetInSeconds = if (goalType == FitnessGoal.GoalType.TIME) {
+                                minutes * 60 + seconds
+                            } else {
+                                repsTarget.toLongOrNull() ?: 0L
+                            }
                             val newGoal = hashMapOf<String, Any>(
                                 "userId" to userId,
                                 "title" to title,
                                 "type" to goalType.name,
-                                "target" to (target.toLongOrNull() ?: 0L),
+                                "target" to targetInSeconds,
                                 "currentProgress" to 0L,
                                 "createdDate" to Timestamp.now(),
                                 "plannedDate" to Timestamp(plannedDate),
@@ -385,10 +724,13 @@ fun AddGoalDialog(
                             onSave(newGoal)
                             onDismiss()
                         },
-                        enabled = title.isNotBlank() && target.isNotBlank() && isDateValid // Проверка на валидность даты
-                    ) {
-                        Text("Сохранить")
-                    }
+                        enabled = (goalType == FitnessGoal.GoalType.REPS && repsTarget.isNotBlank() || goalType == FitnessGoal.GoalType.TIME && (minutes > 0 || seconds > 0)) && title.isNotBlank() && isDateValid,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GreenishCyan,
+                            contentColor = Color.White
+                        )
+                    ) { Text("Сохранить", fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -430,23 +772,28 @@ fun DatePickerDialog(
 }
 
 private fun moveGoalToFinished(goal: FitnessGoal, firestore: FirebaseFirestore) {
+    val finishedGoalsRef = firestore.collection("finished_goals").document()
     val finishedGoal = goal.copy(
+        id = finishedGoalsRef.id,
         isCompleted = true,
         currentProgress = goal.target,
         createdDate = Timestamp.now()
     )
 
     firestore.runBatch { batch ->
-        batch.set(firestore.collection("finished_goals").document(), finishedGoal.toMap())
+        batch.set(finishedGoalsRef, finishedGoal.toMap())
         batch.delete(firestore.collection("fitness_goals").document(goal.id))
-    }.addOnCompleteListener {
-        if (it.isSuccessful) {
-            Log.d("FIREBASE", "Цель перемещена")
+    }.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            Log.d("FIREBASE", "Goal moved to finished successfully")
         } else {
-            Log.e("FIREBASE", "Ошибка: ${it.exception}")
-            // Откатываем статус
+            Log.e("FIREBASE", "Error moving goal to finished: ${task.exception?.message}")
+            // Revert the completion status in case of failure
             firestore.collection("fitness_goals").document(goal.id)
                 .update("isCompleted", false)
+                .addOnFailureListener { e ->
+                    Log.e("FIREBASE", "Error reverting completion status: ${e.message}")
+                }
         }
     }
 }

@@ -1,36 +1,32 @@
 package com.example.fitness_app
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.with
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.auth.FirebaseUser
+import com.example.fitness_app.ui.theme.GreenishCyan
+import com.example.fitness_app.ui.theme.Aqua
+import com.example.fitness_app.ui.theme.GraanCyan
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -42,132 +38,198 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
     var isSignUp by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    Column(
+    // Анимация появления карточки
+    val cardScale = remember { Animatable(0.85f) }
+    val cardAlpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        cardScale.animateTo(1f, animationSpec = tween(700))
+        cardAlpha.animateTo(1f, animationSpec = tween(700))
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color.White),
+        contentAlignment = Alignment.Center
     ) {
-        AnimatedContent(
-            targetState = isSignUp,
-            transitionSpec = {
-                fadeIn() + slideInVertically { -40 } with fadeOut() + slideOutVertically { 40 }
-            },
-            label = "titleAnimation"
-        ) { signUpState ->
-            Text(
-                text = if (signUpState) "Регистрация" else "Вход",
-                style = MaterialTheme.typography.headlineMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Пароль") },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        AnimatedVisibility(
-            visible = isSignUp,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-            modifier = Modifier.animateContentSize()
+        Box(
+            modifier = Modifier
+                .scale(cardScale.value)
+                .alpha(cardAlpha.value)
+                .shadow(32.dp, RoundedCornerShape(32.dp))
+                .background(Color.White, RoundedCornerShape(32.dp))
+                .padding(32.dp)
+                .widthIn(max = 310.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Повторите пароль") },
+                AnimatedContent(
+                    targetState = isSignUp,
+                    transitionSpec = {
+                        (fadeIn(tween(400)) + slideInVertically { it }) with
+                        (fadeOut(tween(400)) + slideOutVertically { -it })
+                    },
+                    label = "titleAnimation"
+                ) { signUpState ->
+                    Text(
+                        text = if (signUpState) "Регистрация" else "Вход",
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = GreenishCyan
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GreenishCyan,
+                        unfocusedBorderColor = GraanCyan,
+                        focusedLabelColor = GreenishCyan,
+                        cursorColor = GreenishCyan
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Пароль") },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GreenishCyan,
+                        unfocusedBorderColor = GraanCyan,
+                        focusedLabelColor = GreenishCyan,
+                        cursorColor = GreenishCyan
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                AnimatedVisibility(
+                    visible = isSignUp,
+                    enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                    exit = fadeOut(tween(400)) + shrinkVertically(tween(400)),
+                    modifier = Modifier.animateContentSize()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            label = { Text("Повторите пароль") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GreenishCyan,
+                                unfocusedBorderColor = GraanCyan,
+                                focusedLabelColor = GreenishCyan,
+                                cursorColor = GreenishCyan
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = nickname,
+                            onValueChange = { nickname = it },
+                            label = { Text("Никнейм") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GreenishCyan,
+                                unfocusedBorderColor = GraanCyan,
+                                focusedLabelColor = GreenishCyan,
+                                cursorColor = GreenishCyan
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
 
-                TextField(
-                    value = nickname,
-                    onValueChange = { nickname = it },
-                    label = { Text("Никнейм") },
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        if (email.isEmpty() || password.isEmpty()) {
+                            Toast.makeText(context, "Пожалуйста, заполните все поля", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (password.length < 8) {
+                            Toast.makeText(context, "Пароль должен быть не менее 8 символов", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (isSignUp) {
+                            if (password != confirmPassword) {
+                                Toast.makeText(context, "Пароли не совпадают", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            if (nickname.isEmpty()) {
+                                Toast.makeText(context, "Введите никнейм", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            registerUser(email, password, nickname) { success, message, userId ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                if (success) {
+                                    onAuthSuccess(userId.toString())
+                                }
+                            }
+                        } else {
+                            loginUser(email, password) { success, message, userId ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                if (success) {
+                                    onAuthSuccess(userId.toString())
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GreenishCyan,
+                        contentColor = Color.White,
+                        disabledContainerColor = GraanCyan.copy(alpha = 0.5f)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 2.dp
+                    )
+                ) {
+                    Text(
+                        if (isSignUp) "Зарегистрироваться" else "Войти",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (isSignUp) "Уже есть аккаунт? Войти" else "Нет аккаунта? Зарегистрироваться",
+                    color = Aqua,
+                    modifier = Modifier
+                        .clickable { isSignUp = !isSignUp }
+                        .padding(8.dp),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
-                    Toast.makeText(context, "Пожалуйста, заполните все поля", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-
-                if (password.length < 8) {
-                    Toast.makeText(context, "Пароль должен быть не менее 8 символов", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-
-                if (isSignUp) {
-                    if (password != confirmPassword) {
-                        Toast.makeText(context, "Пароли не совпадают", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (nickname.isEmpty()) {
-                        Toast.makeText(context, "Введите никнейм", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    registerUser(email, password, nickname) { success, message, userId ->
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        if (success) {
-                            onAuthSuccess(userId.toString())
-                        }
-                    }
-                } else {
-                    loginUser(email, password) { success, message, userId ->
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        if (success) {
-                            onAuthSuccess(userId.toString())
-                        }
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isSignUp) "Зарегистрироваться" else "Войти")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = if (isSignUp) "Уже есть аккаунт? Войти" else "Нет аккаунта? Зарегистрироваться",
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clickable { isSignUp = !isSignUp }
-                .padding(8.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 

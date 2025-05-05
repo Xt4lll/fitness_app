@@ -13,14 +13,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -100,7 +105,15 @@ fun StepCounterScreen() {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Шагомер") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Шагомер", style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -111,66 +124,168 @@ fun StepCounterScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (!hasRequiredPermissions) {
-                Text(
-                    text = "Для работы шагомера необходимы разрешения",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
-            } else {
-                Box(contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        progress = 1f,
-                        color = Color.Gray.copy(alpha = 0.3f),
-                        strokeWidth = 12.dp,
-                        modifier = Modifier.size(220.dp)
-                    )
-                    CircularProgressIndicator(
-                        progress = animatedProgress,
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 12.dp,
-                        modifier = Modifier.size(220.dp)
-                    )
-                    Text(
-                        text = "$animatedSteps",
-                        fontSize = 32.sp,
-                        color = Color.Black
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.LocalFireDepartment, "Calories", tint = Color.Red)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Калории: $animatedCalories", fontSize = 18.sp)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.DirectionsWalk, "Steps", tint = Color.Blue)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Шаги: $animatedSteps/$dailyGoal", fontSize = 18.sp)
-                    }
-                }
-
-                StepHistoryChart(stepsHistory = stepsHistory)
-
-                Spacer(modifier = Modifier.height(24.dp))
-                Column(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
-                    Text("Польза ходьбы и бега", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Ходьба и бег – это не только удобные способы передвижения, но и важные составляющие здорового образа жизни. Регулярные прогулки и пробежки помогают укрепить сердечно-сосудистую систему, улучшить общее самочувствие и снизить уровень стресса. Кроме того, физическая активность способствует улучшению обмена веществ и помогает контролировать вес.")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Сжигание калорий – важный аспект поддержания здорового образа жизни. Количество сожженных калорий зависит от количества шагов, веса человека и интенсивности движения. В нашем приложении калории рассчитываются по следующей формуле:")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Калории = (шаги * 0.04) * вес (кг)")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Поддержание здорового уровня физической активности помогает не только снизить риск развития заболеваний, но и улучшить настроение и повысить общий уровень энергии. Начав с небольших ежедневных прогулок, можно постепенно увеличивать нагрузку, делая шаги к более активной и здоровой жизни.")
+                    Text(
+                        text = "Для работы шагомера необходимы разрешения",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            } else {
+                // Основной счетчик шагов
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .shadow(8.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = 1f,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                strokeWidth = 12.dp,
+                                modifier = Modifier.size(220.dp)
+                            )
+                            CircularProgressIndicator(
+                                progress = animatedProgress,
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 12.dp,
+                                modifier = Modifier.size(220.dp)
+                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "$animatedSteps",
+                                    fontSize = 48.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "шагов",
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Статистика
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            StatisticItem(
+                                icon = Icons.Filled.LocalFireDepartment,
+                                value = "$animatedCalories",
+                                label = "Калории",
+                                color = Color.Red
+                            )
+                            StatisticItem(
+                                icon = Icons.Filled.DirectionsWalk,
+                                value = "$animatedSteps/$dailyGoal",
+                                label = "Цель",
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                // График статистики
+                StepHistoryChart(stepsHistory = stepsHistory)
+
+                // Информация о пользе ходьбы
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.TrendingUp,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Польза ходьбы",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Text(
+                            "Ходьба и бег – это не только удобные способы передвижения, но и важные составляющие здорового образа жизни. Регулярные прогулки и пробежки помогают укрепить сердечно-сосудистую систему, улучшить общее самочувствие и снизить уровень стресса.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            "Калории = (шаги * 0.04) * вес (кг)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StatisticItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String,
+    color: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -185,9 +300,10 @@ private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -198,6 +314,7 @@ private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
             Text(
                 text = "Активность за неделю",
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -227,9 +344,15 @@ private fun StepHistoryChart(stepsHistory: List<Pair<String, Int>>) {
                             modifier = Modifier
                                 .height(height)
                                 .width(24.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = MaterialTheme.shapes.small)
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                        )
+                                    )
+                                )
                         )
 
                         Text(

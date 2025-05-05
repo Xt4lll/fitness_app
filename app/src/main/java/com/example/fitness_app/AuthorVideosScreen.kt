@@ -23,11 +23,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,29 +98,30 @@ fun AuthorVideosScreen(authorId: String, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .height(280.dp),
-            shape = RoundedCornerShape(12.dp)
+                .shadow(8.dp, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         ) {
             Column {
                 // Thumbnail
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 ) {
                     thumbnail?.let { bitmap ->
                         Image(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "Превью видео",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                            modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     } ?: Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
@@ -124,36 +131,37 @@ fun AuthorVideosScreen(authorId: String, navController: NavController) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .size(48.dp)
+                            .size(56.dp)
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = "Воспроизвести",
                             tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
-                
                 // Video info
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = video.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${video.views} просмотров",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -163,14 +171,19 @@ fun AuthorVideosScreen(authorId: String, navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(author?.nickname ?: "Автор") },
+                title = { Text(author?.nickname ?: "Автор", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         if (isLoading) {
             Box(
@@ -181,30 +194,81 @@ fun AuthorVideosScreen(authorId: String, navController: NavController) {
             ) {
                 CircularProgressIndicator()
             }
-        } else if (videos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("У автора пока нет видео")
-            }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(16.dp)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                items(videos) { video ->
-                    VideoCard(
-                        video = video,
-                        onClick = {
-                            navController.navigate("video_player/${video.id}")
-                        }
+                // Автор карточка
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        val avatarUrl = author?.photoUrl?.let { url ->
+                            if (url.contains("?")) "$url&tr=w-64,h-64" else "$url?tr=w-64,h-64"
+                        } ?: ""
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                model = avatarUrl
+                            ),
+                            contentDescription = "Аватар автора",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column {
+                            Text(
+                                text = author?.nickname ?: "Загрузка...",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = author?.email ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                // Видео
+                if (videos.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("У автора пока нет видео", style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        videos.forEach { video ->
+                            VideoCard(
+                                video = video,
+                                onClick = {
+                                    navController.navigate("video_player/${video.id}")
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

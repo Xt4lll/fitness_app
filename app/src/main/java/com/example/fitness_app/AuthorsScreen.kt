@@ -70,6 +70,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.ui.unit.Dp
 
 fun DocumentSnapshot.toUser() = User(
     userId = id,
@@ -83,6 +99,7 @@ fun DocumentSnapshot.toUser() = User(
     createdAt = getTimestamp("created_at") ?: com.google.firebase.Timestamp.now()
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthorsScreen(userId: String, navController: NavController) {
     val db = FirebaseFirestore.getInstance()
@@ -94,6 +111,8 @@ fun AuthorsScreen(userId: String, navController: NavController) {
     val videos = remember { mutableStateListOf<Video>() }
     val tags = remember { mutableStateListOf<String>() }
     val videosByTag = remember { mutableStateMapOf<String, List<Video>>() }
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
 
     // Filtered results
     val filteredAuthors by remember(authors, searchQuery) {
@@ -178,49 +197,76 @@ fun AuthorsScreen(userId: String, navController: NavController) {
         onDispose { subscriptionListener.remove() }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Search field
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Поиск авторов и видео") },
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Авторы и видео", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Black)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(padding)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Search field
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Поиск авторов и видео") },
+                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp, start = 16.dp, end = 16.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            )
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
                 // Search results section
                 if (searchQuery.isNotBlank()) {
                     // Videos found in search
                     if (filteredVideos.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Найденные видео",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                        item {
-                            LazyRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp)
-                            ) {
-                                items(filteredVideos) { video ->
+                        Text(
+                            text = "Найденные видео",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(start = 24.dp, top = 8.dp, bottom = 8.dp)
+                        )
+                        val listState = remember { LazyListState() }
+                        val flingBehavior = rememberSnapFlingBehavior(listState)
+                        LazyRow(
+                            state = listState,
+                            flingBehavior = flingBehavior,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            items(filteredVideos) { video ->
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn() + slideInHorizontally(initialOffsetX = { it / 2 }),
+                                ) {
                                     WorkoutVideoCard(
                                         video = video,
-                                        onClick = { navController.navigate("video_player/${video.id}") }
+                                        onClick = { navController.navigate("video_player/${video.id}") },
+                                        cardWidth = screenWidth * 0.92f
                                     )
                                 }
                             }
@@ -229,96 +275,105 @@ fun AuthorsScreen(userId: String, navController: NavController) {
 
                     // Authors found in search
                     if (filteredAuthors.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Найденные авторы",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                        items(filteredAuthors) { author ->
-                            AuthorItem(
-                                author = author,
-                                isSubscribed = subscriptions.value.contains(author.userId),
-                                onSubscribe = { subscribeToAuthor(userId, author) {} },
-                                onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
-                                onClick = { navController.navigate("author_videos/${author.userId}") }
-                            )
+                        Text(
+                            text = "Найденные авторы",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp)
+                        )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            filteredAuthors.forEach { author ->
+                                AuthorItem(
+                                    author = author,
+                                    isSubscribed = subscriptions.value.contains(author.userId),
+                                    onSubscribe = { subscribeToAuthor(userId, author) {} },
+                                    onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
+                                    onClick = { navController.navigate("author_videos/${author.userId}") }
+                                )
+                            }
                         }
                     }
 
                     // No results message
                     if (filteredVideos.isEmpty() && filteredAuthors.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Ничего не найдено по запросу '$searchQuery'")
-                            }
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Ничего не найдено по запросу '$searchQuery'", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 } else {
                     // Videos by tags section
-                    items(tags) { tag ->
+                    tags.forEach { tag ->
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(start = 24.dp, end = 24.dp, top = 8.dp)
                         ) {
                             Text(
-                                text = "$tag",
-                                style = MaterialTheme.typography.titleLarge,
+                                text = tag,
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .padding(bottom = 8.dp)
-                                    .clickable { navController.navigate("videos/tag/$tag") },
-                                color = MaterialTheme.colorScheme.primary
+                                    .clickable { navController.navigate("videos/tag/$tag") }
                             )
-                            
+                            val listState = remember { LazyListState() }
+                            val flingBehavior = rememberSnapFlingBehavior(listState)
                             LazyRow(
+                                state = listState,
+                                flingBehavior = flingBehavior,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
                             ) {
                                 items(videosByTag[tag] ?: emptyList()) { video ->
-                                    WorkoutVideoCard(
-                                        video = video,
-                                        onClick = { navController.navigate("video_player/${video.id}") }
-                                    )
+                                    AnimatedVisibility(
+                                        visible = true,
+                                        enter = fadeIn() + slideInHorizontally(initialOffsetX = { it / 2 }),
+                                    ) {
+                                        WorkoutVideoCard(
+                                            video = video,
+                                            onClick = { navController.navigate("video_player/${video.id}") },
+                                            cardWidth = screenWidth * 0.92f
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Authors section (only shown when not searching)
-                    item {
-                        Text(
-                            text = "Авторы",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                    Text(
+                        text = "Авторы",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp)
+                    )
 
                     if (authors.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Нет доступных авторов")
-                            }
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Нет доступных авторов", style = MaterialTheme.typography.bodyLarge)
                         }
                     } else {
-                        items(authors) { author ->
-                            AuthorItem(
-                                author = author,
-                                isSubscribed = subscriptions.value.contains(author.userId),
-                                onSubscribe = { subscribeToAuthor(userId, author) {} },
-                                onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
-                                onClick = { navController.navigate("author_videos/${author.userId}") }
-                            )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        ) {
+                            authors.forEach { author ->
+                                AuthorItem(
+                                    author = author,
+                                    isSubscribed = subscriptions.value.contains(author.userId),
+                                    onSubscribe = { subscribeToAuthor(userId, author) {} },
+                                    onUnsubscribe = { unsubscribeFromAuthor(userId, author) {} },
+                                    onClick = { navController.navigate("author_videos/${author.userId}") }
+                                )
+                            }
                         }
                     }
                 }
@@ -328,7 +383,7 @@ fun AuthorsScreen(userId: String, navController: NavController) {
 }
 
 @Composable
-fun WorkoutVideoCard(video: Video, onClick: () -> Unit) {
+fun WorkoutVideoCard(video: Video, onClick: () -> Unit, cardWidth: Dp = 300.dp) {
     var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
     val context = LocalContext.current
 
@@ -347,11 +402,15 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit) {
 
     Card(
         modifier = Modifier
-            .width(300.dp)
-            .height(200.dp)
+            .width(cardWidth)
+            .height(cardWidth * 0.6f)
             .padding(8.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp)
+            .clickable(onClick = onClick)
+            .shadow(8.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -378,16 +437,16 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(48.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Воспроизвести",
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
 
@@ -396,11 +455,11 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit) {
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .padding(8.dp)
+                    .padding(12.dp)
             ) {
                 Text(
                     text = video.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -427,13 +486,18 @@ fun AuthorItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick)
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -442,7 +506,7 @@ fun AuthorItem(
                 horizontalArrangement = Arrangement.Start
             ) {
                 val avatarUrl = author.photoUrl?.let { url ->
-                    if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
+                    if (url.contains("?")) "$url&tr=w-64,h-64" else "$url?tr=w-64,h-64"
                 } ?: ""
 
                 Image(
@@ -455,23 +519,37 @@ fun AuthorItem(
                     ),
                     contentDescription = "Аватар автора",
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(64.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Text(
-                    text = author.nickname,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Spacer(modifier = Modifier.width(20.dp))
+                Column {
+                    Text(
+                        text = author.nickname,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = author.email,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            
             if (isSubscribed) {
-                OutlinedButton(onClick = onUnsubscribe) { Text("Отписаться") }
+                OutlinedButton(
+                    onClick = onUnsubscribe,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(44.dp)
+                ) { Text("Отписаться", style = MaterialTheme.typography.titleMedium) }
             } else {
-                Button(onClick = onSubscribe) { Text("Подписаться") }
+                Button(
+                    onClick = onSubscribe,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(44.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) { Text("Подписаться", style = MaterialTheme.typography.titleMedium) }
             }
         }
     }

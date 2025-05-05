@@ -5,21 +5,33 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -34,9 +46,9 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
 import org.json.JSONObject
-import java.io.File
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
+import com.example.fitness_app.ui.theme.GreenishCyan
+import com.example.fitness_app.ui.theme.Aqua
+import com.example.fitness_app.ui.theme.Red
 
 @Composable
 fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavController) {
@@ -54,6 +66,14 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     val authViewModel: AuthViewModel = viewModel()
     val scrollState = rememberScrollState()
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Анимация появления карточки
+    val cardScale = remember { Animatable(0.85f) }
+    val cardAlpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        cardScale.animateTo(1f, animationSpec = tween(700))
+        cardAlpha.animateTo(1f, animationSpec = tween(700))
+    }
 
     LaunchedEffect(Unit) {
         userEmail = currentUser?.email ?: ""
@@ -106,30 +126,32 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color.White),
+        contentAlignment = Alignment.TopCenter
     ) {
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .verticalScroll(scrollState)
+                .padding(top = 32.dp, bottom = 32.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .clickable { imagePicker.launch("image/*") }
-                    .size(80.dp)
+                    .size(110.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { imagePicker.launch("image/*") },
+                contentAlignment = Alignment.BottomEnd
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier
-                            .size(64.dp)
-                            .align(Alignment.Center)
+                            .size(80.dp)
+                            .align(Alignment.Center),
+                        color = GreenishCyan
                     )
                 } else {
                     Image(
@@ -140,128 +162,220 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                         ),
                         contentDescription = "Аватар пользователя",
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(100.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Сменить фото",
+                        tint = Aqua,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(6.dp, 6.dp)
+                            .size(28.dp)
+                            .background(Color.White, CircleShape)
+                            .padding(4.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = nickname.ifEmpty { "Без имени" },
-                    style = MaterialTheme.typography.titleLarge
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = nickname.ifEmpty { "Без имени" },
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
                 )
-                Text(
-                    text = userEmail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        OutlinedTextField(
-            value = height,
-            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) height = it },
-            label = { Text("Рост (см)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = weight,
-            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) weight = it },
-            label = { Text("Вес (кг)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = goalWeight,
-            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) goalWeight = it },
-            label = { Text("Цель по весу (кг)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = dailyStepGoal,
-            onValueChange = { if (it.matches(Regex("^\\d*\$"))) dailyStepGoal = it },
-            label = { Text("Цель по шагам") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                val userData = hashMapOf(
-                    "height" to height.toDoubleOrNull(),
-                    "weight" to weight.toDoubleOrNull(),
-                    "goal_weight" to goalWeight.toDoubleOrNull(),
-                    "daily_step_goal" to dailyStepGoal.toLongOrNull()
-                )
-                db.collection("users").document(userId)
-                    .set(userData, SetOptions.merge())
-                    .addOnSuccessListener {
-                        Toast.makeText(context, "Данные обновлены!", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Сохранить изменения")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { navController.navigate("bmi_calculator") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Рассчитать ИМТ")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { navController.navigate("subscriptions") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Мои подписки")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { navController.navigate("creative_studio") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Творческая студия")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                authViewModel.logout(
-                    context = context,
-                    onSuccess = {
-                        FirebaseAuth.getInstance().signOut()
-                        onLogout()
-                    },
-                    onFailure = { error ->
-                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    }
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
             )
-        ) {
-            Text("Выйти из аккаунта")
+            Text(
+                text = userEmail,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium
+                )
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            OutlinedTextField(
+                value = height,
+                onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) height = it },
+                label = { Text("Рост (см)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GreenishCyan,
+                    unfocusedBorderColor = GreenishCyan,
+                    focusedLabelColor = GreenishCyan,
+                    cursorColor = GreenishCyan
+                )
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = weight,
+                onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) weight = it },
+                label = { Text("Вес (кг)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GreenishCyan,
+                    unfocusedBorderColor = GreenishCyan,
+                    focusedLabelColor = GreenishCyan,
+                    cursorColor = GreenishCyan
+                )
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = goalWeight,
+                onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) goalWeight = it },
+                label = { Text("Цель по весу (кг)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GreenishCyan,
+                    unfocusedBorderColor = GreenishCyan,
+                    focusedLabelColor = GreenishCyan,
+                    cursorColor = GreenishCyan
+                )
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = dailyStepGoal,
+                onValueChange = { if (it.matches(Regex("^\\d*\$"))) dailyStepGoal = it },
+                label = { Text("Цель по шагам") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GreenishCyan,
+                    unfocusedBorderColor = GreenishCyan,
+                    focusedLabelColor = GreenishCyan,
+                    cursorColor = GreenishCyan
+                )
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = {
+                    val userData = hashMapOf(
+                        "height" to height.toDoubleOrNull(),
+                        "weight" to weight.toDoubleOrNull(),
+                        "goal_weight" to goalWeight.toDoubleOrNull(),
+                        "daily_step_goal" to dailyStepGoal.toLongOrNull()
+                    )
+                    db.collection("users").document(userId)
+                        .set(userData, SetOptions.merge())
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Данные обновлены!", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GreenishCyan,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Text("Сохранить изменения", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = { navController.navigate("bmi_calculator") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GreenishCyan,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Text("Рассчитать ИМТ", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = { navController.navigate("subscriptions") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GreenishCyan,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Text("Мои подписки", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = { navController.navigate("creative_studio") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GreenishCyan,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Text("Творческая студия", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    authViewModel.logout(
+                        context = context,
+                        onSuccess = {
+                            FirebaseAuth.getInstance().signOut()
+                            onLogout()
+                        },
+                        onFailure = { error ->
+                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Red,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Выйти из аккаунта", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

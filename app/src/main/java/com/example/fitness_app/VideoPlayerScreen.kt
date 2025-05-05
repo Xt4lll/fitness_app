@@ -42,6 +42,8 @@ import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import android.content.pm.ActivityInfo
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -229,12 +231,16 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
         topBar = {
             if (!isFullscreen) {
                 TopAppBar(
-                    title = { Text(video?.title ?: "Воспроизведение видео") },
+                    title = { Text(video?.title ?: "Воспроизведение видео", style = MaterialTheme.typography.titleLarge) },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
             }
         }
@@ -243,141 +249,177 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (isFullscreen) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                .padding(if (isFullscreen) PaddingValues(0.dp) else padding)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(if (isFullscreen) PaddingValues(0.dp) else padding),
+            verticalArrangement = Arrangement.Top,
         ) {
-            Box(
-                modifier = if (isFullscreen)
-                    Modifier
-                        .fillMaxSize()
-                        .clickable { showControls = !showControls }
-                else
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .background(Color.Black)
-                        .clickable { showControls = !showControls }
+            // Видео-плеер в карточке
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 16.dp)
+                    .shadow(8.dp, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Black
+                )
             ) {
-                exoPlayer?.let { player ->
-                    AndroidView(
-                        factory = { context ->
-                            PlayerView(context).apply {
-                                this.player = player
-                                useController = false
-                                layoutParams = android.view.ViewGroup.LayoutParams(
-                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                // Используем Box для позиционирования rewind/forward
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (showRewind) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .size(80.dp)
-                                .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(imageVector = Icons.Default.FastRewind, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
-                                Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
-                            }
-                        }
-                    }
-                    if (showForward) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .size(80.dp)
-                                .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(imageVector = Icons.Default.FastForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
-                                Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
-                            }
-                        }
-                    }
-                }
-                // Controls with animation
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Bottom
+                Box(
+                    modifier = if (isFullscreen)
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                            .clickable { showControls = !showControls }
+                    else
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .background(Color.Black)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showControls = !showControls }
                 ) {
-                    AnimatedVisibility(
-                        visible = showControls,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                    exoPlayer?.let { player ->
+                        AndroidView(
+                            factory = { context ->
+                                PlayerView(context).apply {
+                                    this.player = player
+                                    useController = false
+                                    layoutParams = android.view.ViewGroup.LayoutParams(
+                                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    // Используем Box для позиционирования rewind/forward
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (showRewind) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .size(80.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = formatTime(currentPosition),
-                                    color = Color.White,
-                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                                    modifier = Modifier.width(48.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                                Slider(
-                                    value = if (duration > 0) currentPosition / duration.toFloat() else 0f,
-                                    onValueChange = { fraction ->
-                                        val newPosition = (fraction * duration).roundToInt().toLong()
-                                        exoPlayer?.seekTo(newPosition)
-                                        currentPosition = newPosition
-                                    },
-                                    valueRange = 0f..1f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    text = formatTime(duration),
-                                    color = Color.White,
-                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                                    modifier = Modifier.width(48.dp),
-                                    textAlign = TextAlign.Center
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(imageVector = Icons.Default.FastRewind, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                                    Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
+                                }
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
+                        }
+                        if (showForward) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .size(80.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                IconButton(onClick = { seekBy(-10_000) }) {
-                                    Icon(imageVector = Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(imageVector = Icons.Default.FastForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                                    Text("10", color = Color.White, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                                 }
-                                IconButton(onClick = { togglePlayPause() }) {
-                                    Icon(
-                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
-                                        tint = Color.White
+                            }
+                        }
+                    }
+                    // Controls with animation
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        AnimatedVisibility(
+                            visible = showControls,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = formatTime(currentPosition),
+                                        color = Color.White,
+                                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                        modifier = Modifier.width(48.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Slider(
+                                        value = if (duration > 0) currentPosition / duration.toFloat() else 0f,
+                                        onValueChange = { fraction ->
+                                            val newPosition = (fraction * duration).roundToInt().toLong()
+                                            exoPlayer?.seekTo(newPosition)
+                                            currentPosition = newPosition
+                                        },
+                                        valueRange = 0f..1f,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(8.dp)
+                                    )
+                                    Text(
+                                        text = formatTime(duration),
+                                        color = Color.White,
+                                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                        modifier = Modifier.width(48.dp),
+                                        textAlign = TextAlign.Center
                                     )
                                 }
-                                IconButton(onClick = { seekBy(10_000) }) {
-                                    Icon(imageVector = Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White)
-                                }
-                                IconButton(onClick = { toggleFullscreen() }) {
-                                    Icon(
-                                        imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                        contentDescription = if (isFullscreen) "Выйти из полноэкранного режима" else "Полноэкранный режим",
-                                        tint = Color.White
-                                    )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { seekBy(-10_000) },
+                                        modifier = Modifier.size(64.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.FastRewind, contentDescription = "Назад 10 сек", tint = Color.White, modifier = Modifier.size(40.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    IconButton(
+                                        onClick = { togglePlayPause() },
+                                        modifier = Modifier.size(80.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(56.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    IconButton(
+                                        onClick = { seekBy(10_000) },
+                                        modifier = Modifier.size(64.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.FastForward, contentDescription = "Вперёд 10 сек", tint = Color.White, modifier = Modifier.size(40.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    IconButton(
+                                        onClick = { toggleFullscreen() },
+                                        modifier = Modifier.size(56.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                            contentDescription = if (isFullscreen) "Выйти из полноэкранного режима" else "Полноэкранный режим",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -386,82 +428,113 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             }
 
             if (!isFullscreen) {
-                // Информация о видео
-                Column(
+                // Информация о видео и авторе в карточке
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(bottom = 16.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 ) {
-                    // Информация об авторе
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { 
-                                author?.userId?.let { userId ->
-                                    navController.navigate("profile/$userId")
-                                }
-                            }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        val avatarUrl = author?.photoUrl?.let { url ->
-                            if (url.contains("?")) "$url&tr=w-48,h-48" else "$url?tr=w-48,h-48"
-                        } ?: ""
-
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                ImageRequest.Builder(LocalContext.current)
-                                    .data(avatarUrl)
-                                    .placeholder(R.drawable.ic_default_avatar)
-                                    .error(R.drawable.ic_default_avatar)
-                                    .build()
-                            ),
-                            contentDescription = "Аватар автора",
+                        // Автор
+                        Row(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Text(
-                            text = author?.nickname ?: "Загрузка...",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-
-                    Text(
-                        text = video?.title ?: "",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-
-                    Text(
-                        text = video?.description ?: "",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Просмотров: ${video?.views ?: 0}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        video?.tags?.forEach { tag ->
-                            SuggestionChip(
-                                onClick = { 
-                                    navController.navigate("videos/tag/$tag")
+                                .fillMaxWidth()
+                                .clickable {
+                                    author?.userId?.let { userId ->
+                                        navController.navigate("profile/$userId")
+                                    }
                                 },
-                                label = { Text(tag) }
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            val avatarUrl = author?.photoUrl?.let { url ->
+                                if (url.contains("?")) "$url&tr=w-64,h-64" else "$url?tr=w-64,h-64"
+                            } ?: ""
+
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    ImageRequest.Builder(LocalContext.current)
+                                        .data(avatarUrl)
+                                        .placeholder(R.drawable.ic_default_avatar)
+                                        .error(R.drawable.ic_default_avatar)
+                                        .build()
+                                ),
+                                contentDescription = "Аватар автора",
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
                             )
+                            Column {
+                                Text(
+                                    text = author?.nickname ?: "Загрузка...",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = author?.email ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        // Заголовок
+                        Text(
+                            text = video?.title ?: "",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        // Описание
+                        Text(
+                            text = video?.description ?: "",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // Просмотры и дата
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Просмотров: ${video?.views ?: 0}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = video?.uploadDate?.let { "Дата: " + java.text.SimpleDateFormat("dd.MM.yyyy").format(java.util.Date(it)) } ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Теги
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            video?.tags?.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = {
+                                        navController.navigate("videos/tag/$tag")
+                                    },
+                                    label = { Text(tag, style = MaterialTheme.typography.labelLarge) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                            }
                         }
                     }
                 }

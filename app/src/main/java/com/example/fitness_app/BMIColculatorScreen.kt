@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -28,7 +29,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -76,106 +79,158 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
         BMISection(40f, 60f, "Ожирение III степени", Color(0xFFD32F2F)),
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 72.dp)
-                .verticalScroll(rememberScrollState()) // ScrollView для прокрутки
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
+            Text(
+                "Расчет ИМТ",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+
+            // Карточка результата BMI
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .shadow(8.dp, RoundedCornerShape(24.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(24.dp)
             ) {
-                Text("Расчет ИМТ", style = MaterialTheme.typography.headlineMedium)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Поля ввода
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = height,
-                        onValueChange = { height = it },
-                        label = { Text("Рост (см)") },
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        isError = height.isNotEmpty() && !heightValid.value
-                    )
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it },
-                        label = { Text("Вес (кг)") },
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        isError = weight.isNotEmpty() && !weightValid.value
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GenderDropdown(
-                        gender = gender,
-                        onGenderSelected = { gender = it },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = age,
-                        onValueChange = { age = it },
-                        label = { Text("Возраст") },
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        isError = age.isNotEmpty() && !ageValid.value
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        val h = height.toFloat()
-                        val w = weight.toFloat()
-                        val a = age.toInt()
-
-                        var calculatedBMI = w / ((h / 100) * (h / 100))
-
-                        calculatedBMI += when (gender) {
-                            "Мужской" -> 0.5f
-                            "Женский" -> -0.5f
-                            else -> 0f
-                        }
-
-                        calculatedBMI += a * 0.01f
-                        bmi = calculatedBMI.coerceIn(0f, 60f)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = isValid.value
-                ) {
-                    Text("Рассчитать")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Результат
                 val currentCategory = bmiCategories.firstOrNull {
                     bmi >= it.rangeStart && bmi < it.rangeEnd
                 }
-                Text(
-                    text = "%.1f: %s".format(bmi, currentCategory?.label ?: ""),
-                    style = MaterialTheme.typography.headlineSmall
+                val animatedBmi by animateFloatAsState(
+                    targetValue = bmi,
+                    animationSpec = tween(durationMillis = 1000)
                 )
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (bmi > 0f) "%.1f".format(animatedBmi) else "-",
+                        style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
+                        color = currentCategory?.color ?: MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentCategory?.label ?: "Введите данные",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = currentCategory?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            // График BMI
+            BMIModernChart(bmi, bmiCategories)
 
-                BMIChart(bmi, bmiCategories)
+            // Ввод данных
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .shadow(4.dp, RoundedCornerShape(20.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = height,
+                            onValueChange = { height = it },
+                            label = { Text("Рост (см)", color = MaterialTheme.colorScheme.onSurface) },
+                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            isError = height.isNotEmpty() && !heightValid.value,
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = weight,
+                            onValueChange = { weight = it },
+                            label = { Text("Вес (кг)", color = MaterialTheme.colorScheme.onSurface) },
+                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            isError = weight.isNotEmpty() && !weightValid.value,
+                            singleLine = true
+                        )
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GenderDropdown(
+                            gender = gender,
+                            onGenderSelected = { gender = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = age,
+                            onValueChange = { age = it },
+                            label = { Text("Возраст", color = MaterialTheme.colorScheme.onSurface) },
+                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            isError = age.isNotEmpty() && !ageValid.value,
+                            singleLine = true
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            val h = height.toFloat()
+                            val w = weight.toFloat()
+                            val a = age.toInt()
+                            var calculatedBMI = w / ((h / 100) * (h / 100))
+                            calculatedBMI += when (gender) {
+                                "Мужской" -> 0.5f
+                                "Женский" -> -0.5f
+                                else -> 0f
+                            }
+                            calculatedBMI += a * 0.01f
+                            bmi = calculatedBMI.coerceIn(0f, 60f)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isValid.value,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Рассчитать", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Легенда
-                Column {
+            // Легенда
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .shadow(2.dp, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Категории ИМТ:",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                     bmiCategories.forEach {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -183,140 +238,125 @@ fun BMICalculatorScreen(onBack: () -> Unit) {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(12.dp)
-                                    .background(it.color, shape = MaterialTheme.shapes.small)
+                                    .size(16.dp, 12.dp)
+                                    .background(it.color, shape = RoundedCornerShape(4.dp))
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("${it.rangeStart} - ${it.rangeEnd}: ${it.label}")
+                            Text("${it.rangeStart} - ${it.rangeEnd}: ", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(it.label, color = it.color)
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Информационный блок
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Что такое Индекс Массы Тела (ИМТ)?",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = "ИМТ - показатель соотношения роста и веса человека.",
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = "ИМТ = вес (кг) / (рост (м)²)",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = "Категории ИМТ:",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
-                        listOf(
-                            "Менее 16.0" to "Выраженный дефицит массы",
-                            "16.0-17.0" to "Недостаточная масса",
-                            "17.0-18.5" to "Легкий дефицит массы",
-                            "18.5-25.0" to "Нормальный вес",
-                            "25.0-30.0" to "Избыточная масса",
-                            "30.0-35.0" to "Ожирение I степени",
-                            "35.0-40.0" to "Ожирение II степени",
-                            "Более 40.0" to "Ожирение III степени"
-                        ).forEach { (range, description) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "• $range:",
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(text = description)
-                            }
-                        }
-                        Text(
-                            text = "Примечание: ИМТ не учитывает мышечную массу и " +
-                                    "может быть неточным для спортсменов и пожилых людей.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 12.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text("Назад")
                 }
             }
+
+            // Информационный блок
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Что такое Индекс Массы Тела (ИМТ)?",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "ИМТ - показатель соотношения роста и веса человека.",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "ИМТ = вес (кг) / (рост (м)²)",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Примечание: ИМТ не учитывает мышечную массу и может быть неточным для спортсменов и пожилых людей.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text("Назад", style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
-
 @Composable
-fun BMIChart(bmiValue: Float, categories: List<BMISection>) {
+fun BMIModernChart(bmiValue: Float, categories: List<BMISection>) {
     val animatedBmi by animateFloatAsState(
         targetValue = bmiValue,
         animationSpec = tween(durationMillis = 1000)
     )
-
-    Box(modifier = Modifier.height(100.dp).fillMaxWidth()) {
+    Box(
+        modifier = Modifier
+            .height(80.dp)
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val totalWidth = size.width
             val yCenter = size.height / 2
-
-            // Рисуем зоны
             var startX = 0f
-            categories.forEach { section ->
+            categories.forEachIndexed { idx, section ->
                 val sectionWidth = (section.rangeEnd - section.rangeStart) / 60f * totalWidth
-                drawRect(
+                val isFirst = idx == 0
+                val isLast = idx == categories.lastIndex
+                val cornerRadius = when {
+                    isFirst -> androidx.compose.ui.geometry.CornerRadius(12f, 0f)
+                    isLast -> androidx.compose.ui.geometry.CornerRadius(0f, 12f)
+                    else -> androidx.compose.ui.geometry.CornerRadius(0f, 0f)
+                }
+                val topLeft = Offset(startX, yCenter - 18f)
+                val sizeRect = androidx.compose.ui.geometry.Size(sectionWidth, 36f)
+                drawRoundRect(
                     color = section.color,
-                    topLeft = Offset(startX, yCenter - 20f),
-                    size = androidx.compose.ui.geometry.Size(sectionWidth, 40f)
+                    topLeft = topLeft,
+                    size = sizeRect,
+                    cornerRadius = cornerRadius,
+                    style = androidx.compose.ui.graphics.drawscope.Fill
                 )
                 startX += sectionWidth
             }
-
-            // Рисуем стрелку
+            // Стрелка
             val bmiX = (animatedBmi.coerceIn(0f, 60f) / 60f) * totalWidth
             drawLine(
                 color = Color.Black,
-                start = Offset(bmiX, yCenter + 25f),
-                end = Offset(bmiX, yCenter + 45f),
+                start = Offset(bmiX, yCenter + 20f),
+                end = Offset(bmiX, yCenter + 36f),
                 strokeWidth = 6f
             )
-            drawTriangle(bmiX, yCenter + 25f)
+            drawPath(
+                path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(bmiX, yCenter + 20f)
+                    lineTo(bmiX - 10, yCenter + 36f)
+                    lineTo(bmiX + 10, yCenter + 36f)
+                    close()
+                },
+                color = Color.Black
+            )
         }
     }
-}
-
-
-fun DrawScope.drawTriangle(x: Float, y: Float) {
-    drawPath(
-        path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(x, y)
-            lineTo(x - 10, y + 20)
-            lineTo(x + 10, y + 20)
-            close()
-        },
-        color = Color.Black
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
