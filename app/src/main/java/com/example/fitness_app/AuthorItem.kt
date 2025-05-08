@@ -1,5 +1,6 @@
 package com.example.fitness_app
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun AuthorItem(
@@ -126,4 +129,39 @@ fun AuthorItem(
             }
         }
     }
+}
+
+// Функции для работы с подписками
+fun subscribeToAuthor(
+    followerId: String,
+    author: User,
+    onSuccess: () -> Unit
+) {
+    FirebaseFirestore.getInstance().collection("subscriptions")
+        .add(
+            hashMapOf(
+                "followerId" to followerId,
+                "authorId" to author.userId,
+                "timestamp" to FieldValue.serverTimestamp()
+            )
+        )
+        .addOnSuccessListener { onSuccess() }
+        .addOnFailureListener { e -> Log.e("Subscribe", "Ошибка: ${e.message}") }
+}
+
+fun unsubscribeFromAuthor(
+    followerId: String,
+    author: User,
+    onSuccess: () -> Unit
+) {
+    FirebaseFirestore.getInstance().collection("subscriptions")
+        .whereEqualTo("followerId", followerId)
+        .whereEqualTo("authorId", author.userId)
+        .get()
+        .addOnSuccessListener { querySnapshot ->
+            querySnapshot.documents.forEach { doc ->
+                doc.reference.delete()
+            }
+            onSuccess()
+        }
 } 

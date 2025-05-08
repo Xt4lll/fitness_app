@@ -1,6 +1,7 @@
 package com.example.fitness_app
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.PropertyName
 
 data class User(
@@ -38,4 +39,16 @@ data class User(
     // Дополнительные методы при необходимости
     fun isAuthor() = !userId.isBlank() // любой зарегистрированный пользователь может быть автором
 }
+
+fun DocumentSnapshot.toUser() = User(
+    userId = id,
+    email = getString("email") ?: "",
+    nickname = getString("nickname") ?: "No name",
+    photoUrl = getString("photoUrl"),
+    height = getDouble("height"),
+    weight = getDouble("weight"),
+    goalWeight = getDouble("goal_weight"),
+    dailyStepGoal = getLong("daily_step_goal")?.toInt(),
+    createdAt = getTimestamp("created_at") ?: Timestamp.now()
+)
 

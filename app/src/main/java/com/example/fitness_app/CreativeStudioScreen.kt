@@ -1,10 +1,5 @@
 package com.example.fitness_app
 
-import android.content.Context
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,22 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.firebase.firestore.FirebaseFirestore
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import org.json.JSONObject
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.ArrowBack
@@ -43,90 +29,98 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
-import android.os.Handler
-import android.os.Looper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.draw.shadow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.TopAppBarDefaults
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreativeStudioScreen(userId: String, navController: NavController) {
-    var videos by remember { mutableStateOf(listOf<Video>()) }
-    val db = FirebaseFirestore.getInstance()
+fun CreativeStudioScreen(
+    userId: String,
+    navController: NavController,
+    viewModel: CreativeStudioViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(userId) {
-        db.collection("videos")
-            .whereEqualTo("userId", userId)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) return@addSnapshotListener
-
-                val videoList = mutableListOf<Video>()
-                snapshot?.documents?.forEach { document ->
-                    val video = Video(
-                        id = document.id,
-                        title = document.getString("title") ?: "",
-                        description = document.getString("description") ?: "",
-                        userId = document.getString("userId") ?: "",
-                        videoUrl = document.getString("videoUrl") ?: "",
-                        tags = (document.get("tags") as? List<String>) ?: emptyList(),
-                        views = document.getLong("views") ?: 0,
-                        uploadDate = document.getLong("uploadDate") ?: System.currentTimeMillis()
-                    )
-                    videoList.add(video)
-                }
-                videos = videoList.sortedByDescending { it.uploadDate }
-            }
+        viewModel.loadUserVideos(userId)
     }
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 36.dp, bottom = 16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Мои видео",
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black)
+                    )
+                },
+                navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Назад",
+                            contentDescription = "Назад"
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Мои видео",
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
-                    )
-                }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate("add_video") },
                 containerColor = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.shadow(12.dp, RoundedCornerShape(20.dp))
+                shape = MaterialTheme.shapes.medium
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить видео", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = "Добавить видео", tint = MaterialTheme.colorScheme.onPrimary)
             }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp, start = 16.dp, end = 16.dp)
+                .padding(padding)
         ) {
-            items(videos) { video ->
-                AnimatedVideoCard(video = video, onClick = {
-                    navController.navigate("video_player/${video.id}")
-                })
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                uiState.error != null -> {
+                    Text(
+                        text = "Ошибка: ${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                uiState.videos.isEmpty() -> {
+                    Text(
+                        text = "У вас пока нет видео",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        contentPadding = PaddingValues(24.dp)
+                    ) {
+                        items(uiState.videos) { video ->
+                            AnimatedVideoCard(
+                                video = video,
+                                onClick = { navController.navigate("video_player/${video.id}") }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

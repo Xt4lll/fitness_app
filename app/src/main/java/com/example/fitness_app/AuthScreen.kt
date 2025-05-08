@@ -26,7 +26,118 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.fitness_app.ui.theme.GreenishCyan
 import com.example.fitness_app.ui.theme.Aqua
-import com.example.fitness_app.ui.theme.GraanCyan
+import com.example.fitness_app.ui.theme.Green
+import android.content.Context
+import android.content.Intent
+import androidx.compose.ui.text.input.VisualTransformation
+import java.text.SimpleDateFormat
+import java.util.*
+
+// Функции аутентификации
+private fun registerUser(email: String, password: String, nickname: String, callback: (Boolean, String, String?) -> Unit) {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val userId = auth.currentUser?.uid ?: run {
+                    callback(false, "Ошибка: пользователь не найден", null)
+                    return@addOnCompleteListener
+                }
+
+                val userData = hashMapOf(
+                    "email" to email,
+                    "nickname" to nickname,
+                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+
+                db.collection("users").document(userId)
+                    .set(userData)
+                    .addOnSuccessListener {
+                        callback(true, "Регистрация успешна", userId)
+                    }
+                    .addOnFailureListener { e ->
+                        callback(false, "Ошибка Firestore: ${e.message}", null)
+                    }
+            } else {
+                callback(false, "Ошибка аутентификации: ${task.exception?.message}", null)
+            }
+        }
+}
+
+private fun loginUser(email: String, password: String, callback: (Boolean, String, String?) -> Unit) {
+    val auth = FirebaseAuth.getInstance()
+
+    auth.signInWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val userId = auth.currentUser?.uid
+                callback(true, "Успешный вход!", userId)
+            } else {
+                callback(false, "Ошибка входа: ${task.exception?.message}", null)
+            }
+        }
+}
+
+fun logout(
+    context: Context,
+    onSuccess: () -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: run {
+        onFailure("Пользователь не авторизован")
+        return
+    }
+
+    val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    FirebaseFirestore.getInstance().collection("steps")
+        .document("$userId-$date")
+        .set(mapOf(
+            "userId" to userId,
+            "steps" to StepService.stepFlow.value,
+            "date" to date
+        ))
+        .addOnSuccessListener {
+            StepService.resetStepsForNewUser()
+            context.stopService(Intent(context, StepService::class.java))
+            FirebaseAuth.getInstance().signOut()
+            context.startService(Intent(context, StepService::class.java))
+            onSuccess()
+        }
+        .addOnFailureListener { e ->
+            onFailure("Ошибка сохранения данных: ${e.message}")
+        }
+}
+
+// UI компоненты
+@Composable
+private fun AuthTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isPassword: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Email
+        ),
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = GreenishCyan,
+            unfocusedBorderColor = Green,
+            focusedLabelColor = GreenishCyan,
+            cursorColor = GreenishCyan
+        ),
+        modifier = modifier.fillMaxWidth()
+    )
+}
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -84,38 +195,19 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                OutlinedTextField(
+                AuthTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GreenishCyan,
-                        unfocusedBorderColor = GraanCyan,
-                        focusedLabelColor = GreenishCyan,
-                        cursorColor = GreenishCyan
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Email"
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
+                AuthTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GreenishCyan,
-                        unfocusedBorderColor = GraanCyan,
-                        focusedLabelColor = GreenishCyan,
-                        cursorColor = GreenishCyan
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Пароль",
+                    isPassword = true
                 )
 
                 AnimatedVisibility(
@@ -128,36 +220,17 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
+                        AuthTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = { Text("Повторите пароль") },
-                            visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GreenishCyan,
-                                unfocusedBorderColor = GraanCyan,
-                                focusedLabelColor = GreenishCyan,
-                                cursorColor = GreenishCyan
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                            label = "Повторите пароль",
+                            isPassword = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
+                        AuthTextField(
                             value = nickname,
                             onValueChange = { nickname = it },
-                            label = { Text("Никнейм") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GreenishCyan,
-                                unfocusedBorderColor = GraanCyan,
-                                focusedLabelColor = GreenishCyan,
-                                cursorColor = GreenishCyan
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                            label = "Никнейм"
                         )
                     }
                 }
@@ -205,7 +278,7 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GreenishCyan,
                         contentColor = Color.White,
-                        disabledContainerColor = GraanCyan.copy(alpha = 0.5f)
+                        disabledContainerColor = Green.copy(alpha = 0.5f)
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 8.dp,
@@ -231,50 +304,4 @@ fun AuthScreen(onAuthSuccess: (userId: String) -> Unit) {
             }
         }
     }
-}
-
-fun registerUser(email: String, password: String, nickname: String, callback: (Boolean, String, String?) -> Unit) {
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-
-    auth.createUserWithEmailAndPassword(email, password)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val userId = auth.currentUser?.uid ?: run {
-                    callback(false, "Ошибка: пользователь не найден", null)
-                    return@addOnCompleteListener
-                }
-
-                val userData = hashMapOf(
-                    "email" to email,
-                    "nickname" to nickname,
-                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
-
-                db.collection("users").document(userId)
-                    .set(userData)
-                    .addOnSuccessListener {
-                        callback(true, "Регистрация успешна", userId)
-                    }
-                    .addOnFailureListener { e ->
-                        callback(false, "Ошибка Firestore: ${e.message}", null)
-                    }
-            } else {
-                callback(false, "Ошибка аутентификации: ${task.exception?.message}", null)
-            }
-        }
-}
-
-fun loginUser(email: String, password: String, callback: (Boolean, String, String?) -> Unit) {
-    val auth = FirebaseAuth.getInstance()
-
-    auth.signInWithEmailAndPassword(email, password)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val userId = auth.currentUser?.uid
-                callback(true, "Успешный вход!", userId)
-            } else {
-                callback(false, "Ошибка входа: ${task.exception?.message}", null)
-            }
-        }
 }

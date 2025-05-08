@@ -63,7 +63,6 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
 
     val context = LocalContext.current.applicationContext
     val db = FirebaseFirestore.getInstance()
-    val authViewModel: AuthViewModel = viewModel()
     val scrollState = rememberScrollState()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -343,7 +342,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
             Spacer(modifier = Modifier.height(10.dp))
             Button(
                 onClick = {
-                    authViewModel.logout(
+                    logout(
                         context = context,
                         onSuccess = {
                             FirebaseAuth.getInstance().signOut()
@@ -386,7 +385,6 @@ private fun uploadImageToImageKit(
     uri: Uri,
     onComplete: (Boolean, String?) -> Unit
 ) {
-    val publicApiKey = "public_h842XCc32GFUkOupuWPd6WGOnIA="
     val uploadUrl = "https://upload.imagekit.io/api/v1/files/upload"
     val privateApiKey = "private_DQx8pRGWDdYj2K04lEm7kGOzD1M="
     val filename = "avatar_$userId"
