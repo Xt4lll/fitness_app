@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.model
 
 import android.net.Uri
 

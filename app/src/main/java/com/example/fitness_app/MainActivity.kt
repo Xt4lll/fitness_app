@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.fitness_app.ui.theme.*
+import com.example.fitness_app.PlaylistVideosScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -161,6 +162,10 @@ fun FitnessApp() {
                     composable("videos/tag/{tag}") { backStackEntry ->
                         val tag = backStackEntry.arguments?.getString("tag") ?: return@composable
                         TagVideosScreen(tag = tag, navController = navController)
+                    }
+                    composable("playlist_videos/{playlistId}") { backStackEntry ->
+                        val playlistId = backStackEntry.arguments?.getString("playlistId") ?: return@composable
+                        PlaylistVideosScreen(playlistId = playlistId, navController = navController)
                     }
                 }
             }

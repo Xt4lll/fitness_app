@@ -12,22 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.example.fitness_app.model.Video
+import com.google.firebase.firestore.DocumentSnapshot
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,167 +23,124 @@ fun TagVideosScreen(tag: String, navController: NavController) {
     val db = FirebaseFirestore.getInstance()
 
     LaunchedEffect(tag) {
-        // Загружаем видео с указанным тегом
-        db.collection("videos")
-            .whereArrayContains("tags", tag)
-            .addSnapshotListener { snapshot, _ ->
-                val videoList = mutableListOf<Video>()
-                snapshot?.documents?.forEach { document ->
-                    val video = Video(
-                        id = document.id,
-                        title = document.getString("title") ?: "",
-                        description = document.getString("description") ?: "",
-                        userId = document.getString("userId") ?: "",
-                        videoUrl = document.getString("videoUrl") ?: "",
-                        tags = (document.get("tags") as? List<String>) ?: emptyList(),
-                        views = document.getLong("views") ?: 0,
-                        uploadDate = document.getLong("uploadDate") ?: System.currentTimeMillis()
-                    )
-                    videoList.add(video)
-                }
-                videos = videoList.sortedByDescending { it.uploadDate }
-                isLoading = false
-            }
-    }
-
-    @Composable
-    fun VideoCard(video: Video, onClick: () -> Unit) {
-        var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
-        val context = LocalContext.current
-
-        // Загружаем превью из видео
-        LaunchedEffect(video.videoUrl) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val retriever = MediaMetadataRetriever()
-                    retriever.setDataSource(video.videoUrl)
-                    thumbnail = retriever.getFrameAtTime(0)
-                    retriever.release()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .height(280.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column {
-                // Thumbnail
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                ) {
-                    thumbnail?.let { bitmap ->
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Превью видео",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } ?: Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Воспроизвести",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-                
-                // Video info
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = video.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${video.views} просмотров",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
+        loadVideosByTag(db, tag) { videoList ->
+            videos = videoList
+            isLoading = false
         }
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Видео по тегу: #$tag") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+        topBar = { TagVideosTopBar(tag, navController) }
+    ) { padding ->
+        TagVideosContent(
+            modifier = Modifier.padding(padding),
+            isLoading = isLoading,
+            videos = videos,
+            tag = tag,
+            onVideoClick = { videoId ->
+                navController.navigate("video_player/$videoId")
+            }
+        )
+    }
+}
+
+private fun loadVideosByTag(
+    db: FirebaseFirestore,
+    tag: String,
+    onVideosLoaded: (List<Video>) -> Unit
+) {
+    db.collection("videos")
+        .whereArrayContains("tags", tag)
+        .addSnapshotListener { snapshot, _ ->
+            val videoList = snapshot?.documents?.mapNotNull { document ->
+                document.toVideo()
+            } ?: emptyList()
+            onVideosLoaded(videoList.sortedByDescending { it.uploadDate })
+        }
+}
+
+private fun DocumentSnapshot.toVideo(): Video? {
+    return try {
+        Video(
+            id = id,
+            title = getString("title") ?: "",
+            description = getString("description") ?: "",
+            userId = getString("userId") ?: "",
+            videoUrl = getString("videoUrl") ?: "",
+            tags = (get("tags") as? List<String>) ?: emptyList(),
+            views = getLong("views") ?: 0,
+            uploadDate = getLong("uploadDate") ?: System.currentTimeMillis()
+        )
+    } catch (e: Exception) {
+        null
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TagVideosTopBar(tag: String, navController: NavController) {
+    TopAppBar(
+        title = { Text("Видео по тегу: #$tag") },
+        navigationIcon = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+            }
+        }
+    )
+}
+
+@Composable
+private fun TagVideosContent(
+    modifier: Modifier = Modifier,
+    isLoading: Boolean,
+    videos: List<Video>,
+    tag: String,
+    onVideoClick: (String) -> Unit
+) {
+    when {
+        isLoading -> LoadingContent(modifier)
+        videos.isEmpty() -> EmptyContent(modifier, tag)
+        else -> VideoList(modifier, videos, onVideoClick)
+    }
+}
+
+@Composable
+private fun LoadingContent(modifier: Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun EmptyContent(modifier: Modifier, tag: String) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Нет видео с тегом #$tag")
+    }
+}
+
+@Composable
+private fun VideoList(
+    modifier: Modifier,
+    videos: List<Video>,
+    onVideoClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        items(videos) { video ->
+            AnimatedVideoCard(
+                video = video,
+                onClick = { onVideoClick(video.id) }
             )
         }
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (videos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Нет видео с тегом #$tag")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                items(videos) { video ->
-                    VideoCard(
-                        video = video,
-                        onClick = {
-                            navController.navigate("video_player/${video.id}")
-                        }
-                    )
-                }
-            }
-        }
     }
-} 
+}
+

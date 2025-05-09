@@ -1,6 +1,7 @@
 package com.example.fitness_app
 
 import androidx.lifecycle.ViewModel
+import com.example.fitness_app.model.Video
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

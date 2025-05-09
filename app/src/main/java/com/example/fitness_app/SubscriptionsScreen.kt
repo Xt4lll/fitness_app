@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.fitness_app.AuthorItem
 import androidx.compose.material3.MaterialTheme
+import com.example.fitness_app.model.User
 
 @Composable
 fun SubscriptionsScreen(userId: String, navController: NavController) {

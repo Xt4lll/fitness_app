@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot

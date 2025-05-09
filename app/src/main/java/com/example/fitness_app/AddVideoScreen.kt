@@ -1,6 +1,5 @@
 package com.example.fitness_app
 
-import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.fitness_app.model.AddVideoUiState
 import com.example.fitness_app.ui.VideoTitleField
 import com.example.fitness_app.ui.VideoDescriptionField
 import com.example.fitness_app.ui.TagSelection

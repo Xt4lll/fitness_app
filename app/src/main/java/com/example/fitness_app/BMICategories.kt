@@ -1,6 +1,7 @@
 package com.example.fitness_app
 
 import androidx.compose.ui.graphics.Color
+import com.example.fitness_app.model.BMISection
 
 object BMICategories {
     val categories = listOf(

@@ -13,6 +13,9 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +29,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.navigation.NavController
 import androidx.compose.animation.*
@@ -44,6 +46,18 @@ import kotlin.math.roundToInt
 import android.content.pm.ActivityInfo
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.graphics.RectangleShape
+import com.example.fitness_app.model.Playlist
+import com.example.fitness_app.model.User
+import com.example.fitness_app.model.Video
+import com.google.firebase.Timestamp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -58,10 +72,112 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     var showForward by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var isFullscreen by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = context as? androidx.appcompat.app.AppCompatActivity
     val db = FirebaseFirestore.getInstance()
+    val currentUser = FirebaseAuth.getInstance().currentUser
     val autoHideControlsDelay = 3000L // 3 секунды
+    val coroutineScope = rememberCoroutineScope()
+
+    // Улучшенная анимация
+    var animateTrigger by remember { mutableStateOf(false) }
+    val animatedScale by animateFloatAsState(
+        targetValue = if (animateTrigger) 1.35f else 1f,
+        animationSpec = spring(dampingRatio = 0.35f, stiffness = 400f), label = "favScale"
+    )
+    val animatedRotation by animateFloatAsState(
+        targetValue = if (animateTrigger) -20f else 0f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f), label = "favRot"
+    )
+    val animatedColor by animateColorAsState(
+        targetValue = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface,
+        animationSpec = spring(stiffness = 400f), label = "favColor"
+    )
+
+    // --- Playlist add dialog ---
+    var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+    var userPlaylists by remember { mutableStateOf<List<Playlist>>(emptyList()) }
+    var isPlaylistsLoading by remember { mutableStateOf(false) }
+    var playlistAddSuccess by remember { mutableStateOf(false) }
+
+    fun loadUserPlaylists() {
+        val uid = currentUser?.uid ?: return
+        isPlaylistsLoading = true
+        db.collection("playlists")
+            .whereEqualTo("userId", uid)
+            .get()
+            .addOnSuccessListener { snap ->
+                userPlaylists = snap.documents.map { doc ->
+                    Playlist(
+                        id = doc.id,
+                        name = doc.getString("name") ?: "Без названия",
+                        userId = doc.getString("userId") ?: "",
+                        videos = (doc.get("videos") as? List<String>) ?: emptyList()
+                    )
+                }
+                isPlaylistsLoading = false
+            }
+    }
+
+    fun addVideoToPlaylist(playlist: Playlist) {
+        val newVideos = playlist.videos.toMutableList().apply { if (!contains(videoId)) add(videoId) }
+        db.collection("playlists").document(playlist.id)
+            .update("videos", newVideos)
+            .addOnSuccessListener { playlistAddSuccess = true }
+    }
+
+    // Проверяем, находится ли видео в избранном
+    LaunchedEffect(videoId, currentUser?.uid) {
+        currentUser?.uid?.let { userId ->
+            db.collection("favorites")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("videoId", videoId)
+                .get()
+                .addOnSuccessListener { documents ->
+                    isFavorite = !documents.isEmpty
+                }
+        }
+    }
+
+    // Функция для добавления/удаления из избранного
+    fun triggerFavoriteAnimation() {
+        animateTrigger = true
+        coroutineScope.launch {
+            kotlinx.coroutines.delay(220)
+            animateTrigger = false
+        }
+    }
+
+    fun toggleFavorite() {
+        val userId = currentUser?.uid ?: return
+        if (isFavorite) {
+            db.collection("favorites")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("videoId", videoId)
+                .get()
+                .addOnSuccessListener { documents ->
+                    documents.documents.forEach { doc ->
+                        doc.reference.delete()
+                    }
+                    isFavorite = false
+                    triggerFavoriteAnimation()
+                }
+        } else {
+            db.collection("favorites")
+                .add(
+                    hashMapOf(
+                        "userId" to userId,
+                        "videoId" to videoId,
+                        "timestamp" to FieldValue.serverTimestamp()
+                    )
+                )
+                .addOnSuccessListener {
+                    isFavorite = true
+                    triggerFavoriteAnimation()
+                }
+        }
+    }
 
     // Загружаем данные видео и автора
     LaunchedEffect(videoId) {
@@ -97,7 +213,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                     weight = userDoc.getDouble("weight"),
                                     goalWeight = userDoc.getDouble("goal_weight"),
                                     dailyStepGoal = userDoc.getLong("daily_step_goal")?.toInt(),
-                                    createdAt = userDoc.getTimestamp("created_at") ?: com.google.firebase.Timestamp.now()
+                                    createdAt = userDoc.getTimestamp("created_at") ?: Timestamp.now()
                                 )
                             }
                         }
@@ -237,6 +353,35 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
                         }
                     },
+                    actions = {
+                        if (currentUser != null) {
+                            IconButton(
+                                onClick = { toggleFavorite() },
+                                modifier = Modifier
+                                    .scale(animatedScale)
+                                    .graphicsLayer {
+                                        rotationZ = animatedRotation
+                                    }
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
+                                    tint = animatedColor
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    loadUserPlaylists()
+                                    showAddToPlaylistDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlaylistAdd,
+                                    contentDescription = "Добавить в плейлист"
+                                )
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -258,8 +403,8 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp, bottom = 16.dp)
-                    .shadow(8.dp, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp),
+                    .shadow(8.dp, RectangleShape),
+                shape = RectangleShape,
                 colors = CardDefaults.cardColors(
                     containerColor = Color.Black
                 )
@@ -275,7 +420,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
                             .background(Color.Black)
-                            .clip(RoundedCornerShape(20.dp))
                             .clickable { showControls = !showControls }
                 ) {
                     exoPlayer?.let { player ->
@@ -439,6 +583,18 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
+                    var subscriberCount by remember { mutableStateOf(0) }
+                    val authorId = author?.userId
+                    // Слушатель количества подписчиков
+                    LaunchedEffect(authorId) {
+                        authorId?.let { id ->
+                            db.collection("subscriptions")
+                                .whereEqualTo("authorId", id)
+                                .addSnapshotListener { snapshot, _ ->
+                                    subscriberCount = snapshot?.size() ?: 0
+                                }
+                        }
+                    }
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -451,7 +607,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                 .fillMaxWidth()
                                 .clickable {
                                     author?.userId?.let { userId ->
-                                        navController.navigate("profile/$userId")
+                                        navController.navigate("author_videos/$userId")
                                     }
                                 },
                             verticalAlignment = Alignment.CenterVertically,
@@ -483,6 +639,11 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                 )
                                 Text(
                                     text = author?.email ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "$subscriberCount подписчиков",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -539,6 +700,39 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                     }
                 }
             }
+        }
+        if (showAddToPlaylistDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddToPlaylistDialog = false; playlistAddSuccess = false },
+                title = { Text("Добавить в плейлист") },
+                text = {
+                    if (isPlaylistsLoading) {
+                        CircularProgressIndicator()
+                    } else if (userPlaylists.isEmpty()) {
+                        Text("У вас нет плейлистов. Создайте их на странице авторов.")
+                    } else if (playlistAddSuccess) {
+                        Text("Видео добавлено!")
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            userPlaylists.forEach { playlist ->
+                                Button(
+                                    onClick = {
+                                        addVideoToPlaylist(playlist)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(playlist.name)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAddToPlaylistDialog = false; playlistAddSuccess = false }) {
+                        Text("Закрыть")
+                    }
+                }
+            )
         }
     }
 }

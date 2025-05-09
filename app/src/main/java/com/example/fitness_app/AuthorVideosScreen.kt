@@ -23,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import coil.compose.rememberAsyncImagePainter
 import androidx.lifecycle.ViewModel
+import com.example.fitness_app.model.User
+import com.example.fitness_app.model.Video
+import com.example.fitness_app.model.toUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,6 +159,18 @@ private fun AuthorAvatar(photoUrl: String?) {
 
 @Composable
 private fun AuthorInfo(author: User?) {
+    var subscriberCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(author?.userId) {
+        author?.userId?.let { userId ->
+            FirebaseFirestore.getInstance().collection("subscriptions")
+                .whereEqualTo("authorId", userId)
+                .addSnapshotListener { snapshot, _ ->
+                    subscriberCount = snapshot?.size() ?: 0
+                }
+        }
+    }
+
     Column {
         Text(
             text = author?.nickname ?: "Загрузка...",
@@ -164,6 +179,11 @@ private fun AuthorInfo(author: User?) {
         )
         Text(
             text = author?.email ?: "",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "$subscriberCount подписчиков",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -60,6 +60,7 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     var avatarUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var userEmail by remember { mutableStateOf("") }
+    var subscriberCount by remember { mutableStateOf(0) }
 
     val context = LocalContext.current.applicationContext
     val db = FirebaseFirestore.getInstance()
@@ -72,6 +73,15 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
     LaunchedEffect(Unit) {
         cardScale.animateTo(1f, animationSpec = tween(700))
         cardAlpha.animateTo(1f, animationSpec = tween(700))
+    }
+
+    // Получение количества подписчиков
+    LaunchedEffect(userId) {
+        db.collection("subscriptions")
+            .whereEqualTo("authorId", userId)
+            .addSnapshotListener { snapshot, _ ->
+                subscriberCount = snapshot?.size() ?: 0
+            }
     }
 
     LaunchedEffect(Unit) {
@@ -190,6 +200,12 @@ fun ProfileScreen(userId: String, onLogout: () -> Unit, navController: NavContro
                 text = userEmail,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Medium
+                )
+            )
+            Text(
+                text = "$subscriberCount подписчиков",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
             Spacer(modifier = Modifier.height(24.dp))

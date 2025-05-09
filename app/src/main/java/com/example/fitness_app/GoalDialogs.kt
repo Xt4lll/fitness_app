@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.fitness_app.model.FitnessGoal
 import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
@@ -123,8 +124,8 @@ fun AddGoalDialog(
                         onSave(newGoal)
                         onDismiss()
                     },
-                    isSaveEnabled = (goalType == FitnessGoal.GoalType.REPS && repsTarget.isNotBlank() || 
-                                  goalType == FitnessGoal.GoalType.TIME && (minutes > 0 || seconds > 0)) && 
+                    isSaveEnabled = (goalType == FitnessGoal.GoalType.REPS && repsTarget.isNotBlank() ||
+                                  goalType == FitnessGoal.GoalType.TIME && (minutes > 0 || seconds > 0)) &&
                                   title.isNotBlank() && isDateValid
                 )
             }

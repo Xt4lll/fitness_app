@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.example.fitness_app.model.BMISection
 
 @Composable
 fun BMIModernChart(bmiValue: Float, categories: List<BMISection>) {

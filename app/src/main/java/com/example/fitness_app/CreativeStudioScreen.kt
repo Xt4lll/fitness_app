@@ -35,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.TopAppBarDefaults
+import com.example.fitness_app.model.Video
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
