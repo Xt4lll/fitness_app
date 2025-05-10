@@ -77,10 +77,9 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
     val activity = context as? androidx.appcompat.app.AppCompatActivity
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
-    val autoHideControlsDelay = 3000L // 3 секунды
+    val autoHideControlsDelay = 3000L
     val coroutineScope = rememberCoroutineScope()
 
-    // Улучшенная анимация
     var animateTrigger by remember { mutableStateOf(false) }
     val animatedScale by animateFloatAsState(
         targetValue = if (animateTrigger) 1.35f else 1f,
@@ -95,7 +94,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
         animationSpec = spring(stiffness = 400f), label = "favColor"
     )
 
-    // --- Playlist add dialog ---
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
     var userPlaylists by remember { mutableStateOf<List<Playlist>>(emptyList()) }
     var isPlaylistsLoading by remember { mutableStateOf(false) }
@@ -127,7 +125,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             .addOnSuccessListener { playlistAddSuccess = true }
     }
 
-    // Проверяем, находится ли видео в избранном
+    // Проверка, находится ли видео в избранном
     LaunchedEffect(videoId, currentUser?.uid) {
         currentUser?.uid?.let { userId ->
             db.collection("favorites")
@@ -179,7 +177,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
         }
     }
 
-    // Загружаем данные видео и автора
+    // Загрузка данных видео и автора
     LaunchedEffect(videoId) {
         db.collection("videos")
             .document(videoId)
@@ -198,7 +196,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                         uploadDate = document.getLong("uploadDate") ?: 0
                     )
 
-                    // Загружаем данные автора
+                    // данные автора
                     db.collection("users")
                         .document(userId)
                         .get()
@@ -235,7 +233,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             player.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_READY && !viewUpdated) {
-                        // Обновляем просмотры только при первом начале воспроизведения
+                        // Обновление просмотров
                         viewUpdated = true
                         video?.let { currentVideo ->
                             val currentViews = currentVideo.views
@@ -272,7 +270,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
             if (isPlaying) {
                 currentPosition = player.currentPosition
             }
-            delay(16) // Примерно 60 fps для плавного обновления
+            delay(16)
         }
     }
 
@@ -322,7 +320,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
         }
     }
 
-    // Автоматическое скрытие контролов в полноэкранном режиме
+    // Автоматическое скрытие элементов интерфейса в полноэкранном режиме
     LaunchedEffect(showControls, isFullscreen, isPlaying) {
         if (showControls && isFullscreen && isPlaying) {
             delay(autoHideControlsDelay)
@@ -398,7 +396,7 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                 .padding(if (isFullscreen) PaddingValues(0.dp) else padding),
             verticalArrangement = Arrangement.Top,
         ) {
-            // Видео-плеер в карточке
+            // Видеоплеер
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -437,7 +435,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                    // Используем Box для позиционирования rewind/forward
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (showRewind) {
                             Box(
@@ -468,7 +465,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                             }
                         }
                     }
-                    // Controls with animation
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Bottom
@@ -649,19 +645,16 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                 )
                             }
                         }
-                        // Заголовок
                         Text(
                             text = video?.title ?: "",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        // Описание
                         Text(
                             text = video?.description ?: "",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        // Просмотры и дата
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -678,7 +671,6 @@ fun VideoPlayerScreen(videoId: String, navController: NavController) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        // Теги
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)

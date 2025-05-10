@@ -26,16 +26,19 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.material3.MaterialTheme
 import com.example.fitness_app.model.User
+import com.example.fitness_app.ui.AuthorItem
+import com.example.fitness_app.ui.subscribeToAuthor
+import com.example.fitness_app.ui.unsubscribeFromAuthor
 
 @Composable
 fun SubscriptionsScreen(userId: String, navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val authors = remember { mutableStateListOf<User>() }
-    val subscriptions = remember { mutableStateOf(emptySet<String>()) } // Добавлено состояние подписок
+    val subscriptions = remember { mutableStateOf(emptySet<String>()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Добавлен слушатель подписок в реальном времени
+    // слушатель подписок в реальном времени
     DisposableEffect(userId) {
         val listener = db.collection("subscriptions")
             .whereEqualTo("followerId", userId)

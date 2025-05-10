@@ -15,7 +15,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.example.fitness_app.model.Video
 import com.google.firebase.firestore.DocumentSnapshot
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagVideosScreen(tag: String, navController: NavController) {
     var videos by remember { mutableStateOf(listOf<Video>()) }

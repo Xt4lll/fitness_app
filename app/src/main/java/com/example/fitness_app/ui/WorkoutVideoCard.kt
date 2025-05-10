@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.ui
 
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
@@ -59,7 +59,6 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit, cardWidth: Dp = 300.dp) 
         )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Thumbnail
             thumbnail?.let { bitmap ->
                 Image(
                     bitmap = bitmap.asImageBitmap(),
@@ -79,7 +78,6 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit, cardWidth: Dp = 300.dp) 
                 CircularProgressIndicator()
             }
 
-            // Play button
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -96,7 +94,6 @@ fun WorkoutVideoCard(video: Video, onClick: () -> Unit, cardWidth: Dp = 300.dp) 
                 )
             }
 
-            // Video info
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)

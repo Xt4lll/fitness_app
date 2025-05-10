@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

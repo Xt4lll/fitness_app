@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import com.example.fitness_app.model.BMICategories
+import com.example.fitness_app.ui.BMIModernChart
+import com.example.fitness_app.ui.GenderDropdown
 
 
 @Composable

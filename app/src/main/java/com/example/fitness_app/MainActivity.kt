@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,9 +16,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.fitness_app.ui.theme.*
-import com.example.fitness_app.PlaylistVideosScreen
+import com.example.fitness_app.model.NavigationItem
+import com.example.fitness_app.ui.SplashScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +32,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FitnessApp() {
     var showSplash by remember { mutableStateOf(true) }
@@ -172,9 +170,3 @@ fun FitnessApp() {
         }
     }
 }
-
-data class NavigationItem(
-    val route: String,
-    val icon: ImageVector,
-    val label: String
-)

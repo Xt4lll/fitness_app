@@ -27,11 +27,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.checkSelfPermission
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.collect
@@ -263,7 +265,7 @@ fun StepCounterScreen() {
 
 @Composable
 private fun StatisticItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     value: String,
     label: String,
     color: Color
@@ -392,13 +394,13 @@ fun RequestPermissionIfNeeded() {
         val permissionsToRequest = mutableListOf<String>()
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            ContextCompat.checkSelfPermission(context, activityRecognitionPermission) != PackageManager.PERMISSION_GRANTED
+            checkSelfPermission(context, activityRecognitionPermission) != PackageManager.PERMISSION_GRANTED
         ) {
             permissionsToRequest.add(activityRecognitionPermission)
         }
 
         if (foregroundServiceHealthPermission != null &&
-            ContextCompat.checkSelfPermission(context, foregroundServiceHealthPermission) != PackageManager.PERMISSION_GRANTED
+            checkSelfPermission(context, foregroundServiceHealthPermission) != PackageManager.PERMISSION_GRANTED
         ) {
             permissionsToRequest.add(foregroundServiceHealthPermission)
         }

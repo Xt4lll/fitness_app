@@ -9,10 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fitness_app.model.Playlist
 import com.example.fitness_app.model.Video
+import com.example.fitness_app.ui.WorkoutVideoCard
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,7 +93,7 @@ fun PlaylistVideosScreen(playlistId: String, navController: NavController) {
                     WorkoutVideoCard(
                         video = video,
                         onClick = { navController.navigate("video_player/${video.id}") },
-                        cardWidth = Modifier.fillMaxWidth().let { androidx.compose.ui.unit.Dp.Unspecified }
+                        cardWidth = Modifier.fillMaxWidth().let { Dp.Unspecified }
                     )
                 }
             }

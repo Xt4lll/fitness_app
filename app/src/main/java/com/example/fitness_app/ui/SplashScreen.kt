@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -15,8 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import com.example.fitness_app.ui.theme.GreenishCyan
-import com.example.fitness_app.ui.theme.Aqua
 
 @Composable
 fun SplashScreen(onSplashFinished: () -> Unit) {

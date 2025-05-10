@@ -67,6 +67,10 @@ import com.example.fitness_app.model.Playlist
 import com.example.fitness_app.model.User
 import com.example.fitness_app.model.Video
 import com.example.fitness_app.model.toUser
+import com.example.fitness_app.ui.AuthorItem
+import com.example.fitness_app.ui.WorkoutVideoCard
+import com.example.fitness_app.ui.subscribeToAuthor
+import com.example.fitness_app.ui.unsubscribeFromAuthor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -83,12 +87,10 @@ fun AuthorsScreen(userId: String, navController: NavController) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     var selectedTab by remember { mutableStateOf(0) }
 
-    // --- Новое: избранные видео ---
     val currentUser = FirebaseAuth.getInstance().currentUser
     val favoriteVideos = remember { mutableStateListOf<Video>() }
     var isFavoritesLoading by remember { mutableStateOf(false) }
 
-    // --- Tabs ---
     val playlistTabIndex = 2
     val tabTitles = listOf("Авторы", "Избранное", "Плейлисты")
     val playlists = remember { mutableStateListOf<Playlist>() }
@@ -142,7 +144,7 @@ fun AuthorsScreen(userId: String, navController: NavController) {
             isLoading = false
         }
     }
-    // Загружаем избранное при открытии вкладки
+    // Загрузка избранного при открытии вкладки
     LaunchedEffect(selectedTab) {
         if (selectedTab == 1) loadFavoriteVideos()
     }
@@ -182,7 +184,7 @@ fun AuthorsScreen(userId: String, navController: NavController) {
             )
     }
 
-    // Загружаем плейлисты при открытии вкладки
+    // Загрузка плейлистов при открытии вкладки
     LaunchedEffect(selectedTab) {
         if (selectedTab == playlistTabIndex) loadPlaylists()
     }
@@ -364,11 +366,8 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                     }
                 }
                 1 -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    Box(
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         if (isFavoritesLoading) {
                             Box(
@@ -385,7 +384,7 @@ fun AuthorsScreen(userId: String, navController: NavController) {
                                 Text("Нет избранных видео", style = MaterialTheme.typography.bodyLarge)
                             }
                         } else {
-                            VideoList(
+                            VerticalVideoList(
                                 videos = favoriteVideos,
                                 screenWidth = screenWidth,
                                 onVideoClick = { videoId -> navController.navigate("video_player/$videoId") }
@@ -535,6 +534,34 @@ private fun VideoList(
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 12.dp)
+    ) {
+        items(videos) { video ->
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn() + slideInHorizontally(initialOffsetX = { it / 2 })
+            ) {
+                WorkoutVideoCard(
+                    video = video,
+                    onClick = { onVideoClick(video.id) },
+                    cardWidth = screenWidth * 0.92f
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VerticalVideoList(
+    videos: List<Video>,
+    screenWidth: Dp,
+    onVideoClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         items(videos) { video ->
             AnimatedVisibility(

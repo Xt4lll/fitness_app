@@ -133,7 +133,7 @@ fun AnimatedVideoCard(video: Video, onClick: () -> Unit) {
     var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
     var visible by remember { mutableStateOf(false) }
 
-    // Загружаем превью из видео
+    // Загрузка превью из видео
     LaunchedEffect(video.videoUrl) {
         withContext(Dispatchers.IO) {
             try {

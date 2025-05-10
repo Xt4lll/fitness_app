@@ -16,6 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fitness_app.model.FitnessGoal
+import com.example.fitness_app.ui.AddGoalDialog
+import com.example.fitness_app.ui.FinishedGoalItem
+import com.example.fitness_app.ui.GoalItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 

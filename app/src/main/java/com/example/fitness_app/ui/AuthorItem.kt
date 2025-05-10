@@ -1,4 +1,4 @@
-package com.example.fitness_app
+package com.example.fitness_app.ui
 
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.example.fitness_app.R
 import com.example.fitness_app.model.User
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore

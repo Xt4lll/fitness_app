@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModel
 import com.example.fitness_app.model.User
 import com.example.fitness_app.model.Video
 import com.example.fitness_app.model.toUser
+import com.example.fitness_app.ui.WorkoutVideoCard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -118,10 +118,10 @@ class StepService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         
-        // Сначала запускаем сервис в фоновом режиме
+        // запуск сервиса в фоновом режиме
         startForegroundService()
         
-        // Затем проверяем разрешения
+        // проверка разрешений
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
         ) {

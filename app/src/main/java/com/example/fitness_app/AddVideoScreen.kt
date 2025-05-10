@@ -28,7 +28,6 @@ import com.example.fitness_app.ui.VideoTitleField
 import com.example.fitness_app.ui.VideoDescriptionField
 import com.example.fitness_app.ui.TagSelection
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddVideoScreen(
     userId: String,
